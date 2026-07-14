@@ -173,6 +173,31 @@ menu "Stratum Configuration"
         help
             Stratum password to use with pool
 
+    config POOL_B_STRATUM_URL
+        string "Pool B Stratum Address"
+        default "public-pool.io"
+        help
+            Second active pool address used when dual mining is enabled.
+
+    config POOL_B_STRATUM_PORT
+        int "Pool B Stratum Port"
+        range 0 65535
+        default 21496
+        help
+            Second active pool port used when dual mining is enabled.
+
+    config POOL_B_STRATUM_USER
+        string "Pool B Stratum username"
+        default "replace-this-with-your-btc-address.poolb"
+        help
+            Stratum user for the second active pool.
+
+    config POOL_B_STRATUM_PW
+        string "Pool B Stratum password"
+        default "x"
+        help
+            Stratum password for the second active pool.
+
     config FALLBACK_STRATUM_USER
         string "Fallback Stratum username"
         default "replace-this-with-your-btc-address.bitaxe"
