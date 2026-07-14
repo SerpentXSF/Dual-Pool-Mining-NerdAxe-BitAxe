@@ -41,16 +41,18 @@ esp_err_t POST_WWW_update(httpd_req_t *req)
         return ESP_FAIL;
     }
 
-    // Erase incrementally, one flash sector at a time as we write into it, instead of
-    // erasing the whole 3 MB partition up front. The up-front erase blocks the HTTP
-    // task for several seconds; with the dashboard still polling, that stall gets the
-    // upload connection dropped ("Http failure during parsing" in the browser).
-    const uint32_t SECTOR = 4096;
+    // Erase the entire www partition before writing
+    {
+        // lock the power management module
+        LockGuard g(POWER_MANAGEMENT_MODULE);
+        ESP_LOGI(TAG, "erasing www partition ...");
+        ESP_ERROR_CHECK(esp_partition_erase_range(www_partition, 0, www_partition->size));
+        ESP_LOGI(TAG, "erasing done");
+    }
 
     // don't put it on the stack
     char *buf = (char*) malloc(2048);
     uint32_t offset = 0;
-    uint32_t erased_up_to = 0;
 
     while (remaining > 0) {
         int recv_len = httpd_req_recv(req, buf, min(remaining, 2048));
@@ -66,17 +68,6 @@ esp_err_t POST_WWW_update(httpd_req_t *req)
         {
             // lock the power management module
             LockGuard g(POWER_MANAGEMENT_MODULE);
-
-            // Erase any sectors we're about to write into (writes are sequential).
-            uint32_t write_end = offset + recv_len;
-            while (erased_up_to < write_end && erased_up_to < www_partition->size) {
-                if (esp_partition_erase_range(www_partition, erased_up_to, SECTOR) != ESP_OK) {
-                    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Erase Error");
-                    free(buf);
-                    return ESP_FAIL;
-                }
-                erased_up_to += SECTOR;
-            }
 
             // print each 64kb
             if (!(offset & 0xffff)) {

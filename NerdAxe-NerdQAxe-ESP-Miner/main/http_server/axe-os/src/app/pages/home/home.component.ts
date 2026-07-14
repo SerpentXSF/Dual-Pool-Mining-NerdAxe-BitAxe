@@ -99,11 +99,6 @@ import { maxAsicTemp,
 export class HomeComponent implements AfterViewChecked, OnInit, OnDestroy {
   @ViewChild('myChart') ctx!: ElementRef<HTMLCanvasElement>;
 
-  // ---- Dual-mining per-pool hashrate mini-charts (isolated from the main chart) ----
-  private poolHrBuf: { t: number; hr: [number, number] }[] = [];
-  private poolCharts: (Chart | null)[] = [null, null];
-  private static readonly POOL_HR_MAX = 180; // rolling window of samples
-
   // Persisted UI state: chart collapsed (visual-only; data continues tracking).
   public isChartCollapsed: boolean = false;
   private readonly chartCollapsedKey: string = HOME_CFG.storage.keys.chartCollapsed;
@@ -724,10 +719,6 @@ export class HomeComponent implements AfterViewChecked, OnInit, OnDestroy {
       onInfo: (info) => {
         if (!info) return;
         this._info = info;
-        // Per-pool hashrate mini-charts (dual mode). Guarded so it can never break polling.
-        try { this.samplePoolHashrate(); } catch {}
-        // Dashboard gauge cards (Power / Heat / Performance). Guarded.
-        try { this.updateGauges(); } catch {}
         try {
           const flagKey = '__nerdCharts_clearChartHistoryOnce';
           if (this.localStorageGet(flagKey) === '1') {
@@ -1068,7 +1059,6 @@ ngOnInit() {
       this.chart.destroy();
       this.chart = undefined;
     }
-    this.destroyPoolCharts();
 
     // Clean up theme subscription to avoid memory leaks when navigating away.
     this.themeSubscription?.unsubscribe();
@@ -1877,112 +1867,6 @@ private setAxisPadding(cfg: any, persist: boolean = false): void {
 
     // Only one pool is active → return 100 for that pool, 0 for the other
     return active[i] ? 100 : 0;
-  }
-
-  // ---- Dual-mining per-pool hashrate mini-charts ----
-  // Self-contained: own rolling buffer + own Chart.js instances (by canvas id),
-  // completely independent of the main Nerd* chart. Each pool's hashrate is
-  // total x that pool's balance (GH/s), sampled on every info poll.
-  private samplePoolHashrate(): void {
-    if (!this.isDualPool) {
-      if (this.poolCharts[0] || this.poolCharts[1]) this.destroyPoolCharts();
-      if (this.poolHrBuf.length) this.poolHrBuf = [];
-      return;
-    }
-    const hr0 = Number(this.getPoolHashrate(0)) || 0;
-    const hr1 = Number(this.getPoolHashrate(1)) || 0;
-    this.poolHrBuf.push({ t: Date.now(), hr: [hr0, hr1] });
-    const overflow = this.poolHrBuf.length - HomeComponent.POOL_HR_MAX;
-    if (overflow > 0) this.poolHrBuf.splice(0, overflow);
-    this.renderPoolCharts();
-  }
-
-  private makePoolChart(canvas: HTMLCanvasElement, color: string): Chart {
-    return new Chart(canvas, {
-      type: 'line',
-      data: { labels: [], datasets: [{ data: [], borderColor: color, backgroundColor: color + '22',
-        fill: true, tension: 0.35, pointRadius: 0, borderWidth: 2 }] },
-      options: {
-        responsive: true, maintainAspectRatio: false, animation: false,
-        interaction: { mode: 'index', intersect: false },
-        plugins: {
-          legend: { display: false },
-          tooltip: { displayColors: false, callbacks: { label: (c: any) => `${Number(c.raw).toFixed(2)} GH/s` } },
-        },
-        scales: {
-          x: { display: false },
-          y: { beginAtZero: false, grid: { color: 'rgba(255,255,255,0.06)' },
-            ticks: { maxTicksLimit: 4, font: { size: 10 }, color: 'rgba(200,208,224,0.7)',
-              callback: (v: any) => `${Number(v).toFixed(0)}` } },
-        },
-      },
-    });
-  }
-
-  private renderPoolCharts(): void {
-    const colors = ['#a78bfa', '#2dd4bf'];
-    for (let i = 0; i < 2; i++) {
-      const canvas = document.getElementById(`poolHrChart${i}`) as HTMLCanvasElement | null;
-      if (!canvas) {
-        if (this.poolCharts[i]) { try { this.poolCharts[i]!.destroy(); } catch {} this.poolCharts[i] = null; }
-        continue;
-      }
-      if (!this.poolCharts[i]) this.poolCharts[i] = this.makePoolChart(canvas, colors[i]);
-      const chart = this.poolCharts[i]!;
-      chart.data.labels = this.poolHrBuf.map(s => new Date(s.t).toLocaleTimeString());
-      chart.data.datasets[0].data = this.poolHrBuf.map(s => s.hr[i]);
-      chart.update('none');
-    }
-  }
-
-  private destroyPoolCharts(): void {
-    for (let i = 0; i < 2; i++) {
-      if (this.poolCharts[i]) { try { this.poolCharts[i]!.destroy(); } catch {} this.poolCharts[i] = null; }
-    }
-  }
-
-  // ---- Dashboard gauge cards (lightweight SVG donut gauges; no library) ----
-  private static readonly GAUGE_CIRC = 2 * Math.PI * 42; // r=42 in the 100x100 viewBox
-  public gaugeCards: { title: string; gauges: { label: string; valueText: string; unit: string; color: string; offset: number }[] }[] = [];
-
-  private gauge(label: string, value: number, max: number, unit: string, dec: number, color: string) {
-    const v = Number.isFinite(value) ? value : 0;
-    const frac = max > 0 ? Math.max(0, Math.min(1, v / max)) : 0;
-    return { label, valueText: v.toFixed(dec), unit, color, offset: HomeComponent.GAUGE_CIRC * (1 - frac) };
-  }
-
-  private gaugeTempColor(t: number): string {
-    if (t >= 70) return '#f87171';
-    if (t >= 60) return '#fbbf24';
-    return '#34d399';
-  }
-
-  private updateGauges(): void {
-    const info: any = this._info;
-    if (!info) { this.gaugeCards = []; return; }
-    const perf = info.performance || {}, pwr = info.power || {}, th = info.thermal || {};
-    const fan = (th.fans && th.fans[0]) || {};
-    const freqMax = Number(this.asicFreqMax(info)) || 700;
-    const hr = Number(perf.hashRate) || 0;
-    const temp = Number(th.asicTemp) || 0;
-    const eff = (Number(pwr.watts) > 0 && hr > 0) ? Number(pwr.watts) / (hr / 1000) : 0;
-    this.gaugeCards = [
-      { title: 'Power', gauges: [
-        this.gauge('Power', Number(pwr.watts) || 0, 30, 'W', 1, '#a78bfa'),
-        this.gauge('Input', Number(pwr.voltage) || 0, 15, 'V', 2, '#60a5fa'),
-        this.gauge('Current', Number(pwr.currentA) || 0, 5, 'A', 2, '#60a5fa'),
-      ]},
-      { title: 'Heat', gauges: [
-        this.gauge('ASIC Temp', temp, 85, '°C', 0, this.gaugeTempColor(temp)),
-        this.gauge('Fan', Number(fan.speed) || 0, 100, '%', 0, '#2dd4bf'),
-        this.gauge('Fan RPM', Number(fan.rpm) || 0, 8000, 'RPM', 0, '#2dd4bf'),
-      ]},
-      { title: 'Performance', gauges: [
-        this.gauge('Frequency', Number(perf.frequency) || 0, freqMax, 'MHz', 0, '#a78bfa'),
-        this.gauge('Hashrate', hr, Math.max(hr * 1.25, 100), 'GH/s', 0, '#a78bfa'),
-        this.gauge('Efficiency', eff, 50, 'J/Th', 2, '#34d399'),
-      ]},
-    ];
   }
 
 

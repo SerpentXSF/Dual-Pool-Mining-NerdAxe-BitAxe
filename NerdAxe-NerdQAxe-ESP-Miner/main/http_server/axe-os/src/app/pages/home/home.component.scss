@@ -53,9 +53,6 @@ nb-card-body.pool-tile-card__body{
   padding: 12px !important;
   margin: 0 !important;
   background: var(--tile-surface);
-  /* UI polish: subtle hairline for tile definition (inset = no layout shift;
-     transparent fallback leaves light themes untouched). */
-  box-shadow: inset 0 0 0 1px var(--tile-hairline, transparent);
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -1360,12 +1357,7 @@ nb-card-header{
 
   /* Units (suffixes like MHz, V, A, W, °C, %) should be quieter than the numbers */
   /* Unify all quiet labels/suffixes (units, hints, A1/A2 glyph labels) */
-  /* UI polish: lifted a touch for better contrast on the dark surfaces. */
-  --unit-color: #D3D9E7;
-
-  /* UI polish: subtle hairline to give tiles/cards definition against the dark bg
-     (applied as an inset box-shadow, so it never shifts layout). */
-  --tile-hairline: rgba(255, 255, 255, 0.07);
+  --unit-color: #C2C8D7;
   /* Main hashrate unit should be theme-aware (dark/cosmic follow unit tone). */
   --hashrate-main-unit-color: var(--unit-color);
 
@@ -2467,87 +2459,4 @@ nb-card-header{
 :host-context(.nb-theme-corporate) .block-header-box,
 :host-context(.nb-theme-light) .block-header-box{
   background: rgba(255, 255, 255, 0.5);
-}
-
-/* Dual-mining per-pool hashrate mini-charts: side by side, stack on narrow screens. */
-.pool-hr-charts {
-  display: flex;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-.pool-hr-charts .pool-hr-chart {
-  flex: 1 1 0;
-  min-width: 0;
-  margin-bottom: 0;
-}
-.pool-hr-charts .pool-hr-canvas {
-  position: relative;
-  height: 180px;
-}
-@media (max-width: 767px) {
-  .pool-hr-charts { flex-direction: column; }
-}
-
-/* Dashboard gauge cards: modern SVG donut gauges (Power / Heat / Performance). */
-.gauge-row .gauge-card { margin-bottom: 0; }
-.gauge-grid {
-  display: flex;
-  justify-content: space-around;
-  align-items: flex-start;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding: 6px 2px 2px;
-}
-.gauge-grid .gauge {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  flex: 1 1 0;
-  min-width: 80px;
-}
-.gauge-dial {
-  position: relative;
-  width: 92px;
-  height: 92px;
-}
-.gauge-dial .gauge-svg {
-  width: 100%;
-  height: 100%;
-  transform: rotate(-90deg); /* arc starts at 12 o'clock */
-}
-.gauge-dial .gauge-track {
-  fill: none;
-  stroke: rgba(255, 255, 255, 0.08);
-  stroke-width: 8;
-}
-.gauge-dial .gauge-arc {
-  fill: none;
-  stroke-width: 8;
-  stroke-linecap: round;
-  transition: stroke-dashoffset 0.5s ease, stroke 0.3s ease;
-}
-.gauge-dial .gauge-center {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-.gauge-dial .gauge-value {
-  font-size: 17px;
-  font-weight: 650;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-.gauge-dial .gauge-unit {
-  font-size: 10px;
-  opacity: 0.65;
-  margin-top: 2px;
-}
-.gauge-grid .gauge-label {
-  font-size: 11.5px;
-  opacity: 0.82;
-  margin-top: 8px;
-  text-align: center;
 }
