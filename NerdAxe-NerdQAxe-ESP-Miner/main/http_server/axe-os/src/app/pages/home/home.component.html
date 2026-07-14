@@ -108,6 +108,30 @@
               </div>
             </nb-card-body>
           </nb-card>
+
+          <!-- Dual mining: per-pool hashrate charts (side by side; stack on narrow screens) -->
+          <div class="pool-hr-charts" *ngIf="isDualPool">
+            <nb-card class="nerd-chart-card pool-hr-chart">
+              <nb-card-header class="nerd-chart-header">
+                <span class="text-hint">Pool 1 Hashrate</span>
+              </nb-card-header>
+              <nb-card-body class="chart-card-body">
+                <div class="chart-canvas">
+                  <div class="chart-canvas__wrap pool-hr-canvas"><canvas id="poolHrChart0"></canvas></div>
+                </div>
+              </nb-card-body>
+            </nb-card>
+            <nb-card class="nerd-chart-card pool-hr-chart">
+              <nb-card-header class="nerd-chart-header">
+                <span class="text-hint">Pool 2 Hashrate</span>
+              </nb-card-header>
+              <nb-card-body class="chart-card-body">
+                <div class="chart-canvas">
+                  <div class="chart-canvas__wrap pool-hr-canvas"><canvas id="poolHrChart1"></canvas></div>
+                </div>
+              </nb-card-body>
+            </nb-card>
+          </div>
         </div>
       </div>
 

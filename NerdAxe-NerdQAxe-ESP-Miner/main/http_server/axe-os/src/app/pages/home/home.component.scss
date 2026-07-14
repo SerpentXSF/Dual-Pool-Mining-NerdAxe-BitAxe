@@ -2468,3 +2468,22 @@ nb-card-header{
 :host-context(.nb-theme-light) .block-header-box{
   background: rgba(255, 255, 255, 0.5);
 }
+
+/* Dual-mining per-pool hashrate mini-charts: side by side, stack on narrow screens. */
+.pool-hr-charts {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.pool-hr-charts .pool-hr-chart {
+  flex: 1 1 0;
+  min-width: 0;
+  margin-bottom: 0;
+}
+.pool-hr-charts .pool-hr-canvas {
+  position: relative;
+  height: 180px;
+}
+@media (max-width: 767px) {
+  .pool-hr-charts { flex-direction: column; }
+}
