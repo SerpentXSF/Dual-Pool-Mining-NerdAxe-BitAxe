@@ -1,0 +1,117 @@
+<div class="card">
+    <h2>Update</h2>
+
+    <div class="grid">
+        <div class="col-12 xl:col-4">
+            <div class="card h-full">
+                <h5>Current Version: {{(info$ | async)?.version}}</h5>
+
+                <ng-container *ngIf="checkLatestRelease == false; else afterCheck">
+                    <h3>Latest Release: <p-button (onClick)="handleReleaseCheck()">Check</p-button></h3>
+
+                    <app-modal #privacyModal [headline]="'Privacy Warning'">
+                        <p>
+                            Please note, this will connect to <strong>github.com</strong> to check for the latest release.
+                        </p>
+                        <p class="flex gap-2">
+                            <p-checkbox
+                                [binary]="true"
+                                inputId="ignoreWarning"
+                                #ignoreWarning></p-checkbox>
+                            <label for="ignoreWarning">Don't show again</label>
+                        </p>
+                        <div class="flex gap-3 mt-5">
+                            <p-button (onClick)="continueReleaseCheck(ignoreWarning.model)">Continue</p-button>
+                            <p-button styleClass="p-button-secondary" (onClick)="privacyModal.isVisible = false">Cancel</p-button>
+                        </div>
+                    </app-modal>
+                </ng-container>
+
+                <ng-template #afterCheck>
+                    <ng-container *ngIf="latestRelease$ | async as latestRelease">
+                        <h3>Latest Release:
+                            <a style="text-decoration: underline;" target="_blank"
+                            [href]="latestRelease.html_url">{{latestRelease.name}}</a>
+                        </h3>
+
+                        <div class="text-orange-500 mb-3">Download both files for update!</div>
+
+                        <div *ngFor="let asset of latestRelease.assets">
+                            <div *ngIf="asset.name == 'esp-miner.bin'">
+                                <a style="text-decoration: underline;" target="_blank"
+                                    [href]="asset.browser_download_url">esp-miner.bin</a>
+                            </div>
+                            <div *ngIf="asset.name == 'www.bin'">
+                                <a style="text-decoration: underline;" target="_blank"
+                                    [href]="asset.browser_download_url">www.bin</a>
+                            </div>
+                        </div>
+
+                        <a class="text-color-secondary underline block mt-3 cursor-pointer" (click)="releaseNotesModal.isVisible = true">
+                            Release Notes
+                        </a>
+
+                        <app-modal #releaseNotesModal [headline]="latestRelease.name">
+                            <div [innerHTML]="simpleMarkdownParser(latestRelease.body)"></div>
+                        </app-modal>
+                    </ng-container>
+                </ng-template>
+            </div>
+        </div>
+        <div class="col-12 lg:col-6 xl:col-4">
+            <div class="card h-full">
+                <h3>Update AxeOS</h3>
+
+                <p-fileupload #websiteUpload [customUpload]="true" mode="basic" accept=".bin" (uploadHandler)="otaWWWUpdate($event)"
+                    [auto]="true" chooseLabel="Browse"></p-fileupload>
+
+                <small>(www.bin)</small>
+            </div>
+        </div>
+        <div class="col-12 lg:col-6 xl:col-4">
+            <div class="card h-full">
+                <h3>Update Firmware</h3>
+                <p-fileupload #firmwareUpload [customUpload]="true" mode="basic" accept=".bin" (uploadHandler)="otaUpdate($event)"
+                    [auto]="true" chooseLabel="Browse"></p-fileupload>
+
+                <small>(esp-miner.bin)</small>
+            </div>
+
+        </div>
+    </div>
+</div>
+<app-modal #progressModal [headline]="'Updating ' + updateTarget" [closable]="updateStatus !== 'progress'">
+    <div class="flex flex-column align-items-center justify-content-center p-4">
+        <ng-container *ngIf="updateStatus === 'progress'">
+            <div class="text-xl mb-3" *ngIf="updateTarget === 'AxeOS' && websiteUpdateProgress !== null">
+                Uploading... {{ websiteUpdateProgress }}%
+            </div>
+            <div class="text-xl mb-3" *ngIf="updateTarget === 'Firmware' && firmwareUpdateProgress !== null">
+                Uploading... {{ firmwareUpdateProgress }}%
+            </div>
+            <div class="text-xl mb-3" *ngIf="(updateTarget === 'AxeOS' && websiteUpdateProgress === null) || (updateTarget === 'Firmware' && firmwareUpdateProgress === null)">
+                Applying update...
+            </div>
+            <p-progressbar class="w-full" [styleClass]="'instant-progress'" [showValue]="false" [value]="updateTarget === 'AxeOS' ? websiteUpdateProgress : firmwareUpdateProgress" [style]="{'height': '1.5rem', 'width': '100%'}"></p-progressbar>
+            <div class="text-center mt-3 text-color-secondary">
+                Please do not disconnect the power.
+            </div>
+        </ng-container>
+
+        <ng-container *ngIf="updateStatus === 'success'">
+            <i class="pi pi-check-circle text-green-500" style="font-size: 3.5rem; margin-bottom: 1rem;"></i>
+            <div class="text-lg text-center">{{ updateMessage }}</div>
+            <div class="mt-4" *ngIf="updateTarget !== 'AxeOS'">
+                <p-button (onClick)="progressModal.isVisible = false">Close</p-button>
+            </div>
+        </ng-container>
+
+        <ng-container *ngIf="updateStatus === 'error'">
+            <i class="pi pi-times-circle text-red-500" style="font-size: 3.5rem; margin-bottom: 1rem;"></i>
+            <div class="text-lg text-center text-red-500">{{ updateMessage }}</div>
+             <div class="mt-4">
+                <p-button (onClick)="progressModal.isVisible = false">Close</p-button>
+            </div>
+        </ng-container>
+    </div>
+</app-modal>

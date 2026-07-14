@@ -1,0 +1,9 @@
+build/
+sdkconfig
+sdkconfig.old
+managed_components/
+node_modules/
+dist/
+.vscode/
+*.o
+test_dual_pool
