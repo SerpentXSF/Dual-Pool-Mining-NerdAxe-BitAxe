@@ -11,6 +11,7 @@
 #include "esp_transport_tcp.h"
 #include "esp_transport_ssl.h"
 #include "pool_failover.h"
+#include "stratum_recv_ctx.h"
 #include "freertos/task.h"
 #include <string.h>
 

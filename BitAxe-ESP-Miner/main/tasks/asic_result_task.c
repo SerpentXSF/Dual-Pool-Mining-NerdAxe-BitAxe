@@ -78,8 +78,8 @@ void ASIC_result_task(void *pvParameters)
         uint32_t version_bits = asic_result->rolled_version ^ active_job->version;
         if (nonce_diff >= active_job->pool_diff)
         {
-            // Route by the job's originating pool. Pool B is always V1; Pool A
-            // follows the active stratum protocol (V1 or V2).
+            // DUAL-POOL: route by the job's originating pool. Pool B is always V1;
+            // Pool A follows the active stratum protocol (V1 or V2).
             bool is_b = (active_job->pool_id == POOL_B);
             if (!is_b && GLOBAL_STATE->stratum_protocol == STRATUM_PROTOCOL_V2) {
                 // SV2: submit with binary protocol

@@ -84,11 +84,8 @@ void STRATUM_V1_initialize_buffer();
 
 char *STRATUM_V1_receive_jsonrpc_line(esp_transport_handle_t transport);
 
-// Reentrant variant using a caller-owned buffer (bufp/sizep start as {NULL, 0}).
-// Lets a second concurrent stratum connection (dual mining Pool B) receive lines
-// without sharing the global accumulator. Returns a malloc'd line (caller frees)
-// or NULL on error (buffer is freed and reset to NULL on error).
-char *STRATUM_V1_receive_jsonrpc_line_ctx(esp_transport_handle_t transport, char **bufp, size_t *sizep);
+// DUAL-POOL: the reentrant receive was moved to components/dual_pool/stratum_recv_ctx.h
+// (include that header instead). Kept out of this upstream file to minimise merge churn.
 
 int STRATUM_V1_subscribe(esp_transport_handle_t transport, int send_uid, const char * model);
 

@@ -99,7 +99,7 @@ typedef struct
     uint16_t fallback_pool_protocol;
     char pool_connection_info[64];
 
-    // ---- Dual mining: Pool B endpoint + dedicated failover + per-pool counters ----
+    // DUAL-POOL BEGIN: Pool B endpoint + dedicated failover + per-pool counters
     char * poolB_url;
     uint16_t poolB_port;
     char * poolB_user;
@@ -114,6 +114,7 @@ typedef struct
     uint64_t poolB_shares_accepted;
     uint64_t poolB_shares_rejected;
     char poolB_connection_info[64];
+    // DUAL-POOL END
     bool overheat_mode;
     bool mining_paused;
     bool pools_unavailable;
@@ -195,8 +196,8 @@ typedef struct
     // For requests not expecting a response (called notifications), this is null.
     int send_uid;
 
-    // ---- Dual mining: Pool B parallel state (plain data; no dual_pool type here
-    // so global_state.h stays include-light for the asic/connect components) ----
+    // DUAL-POOL BEGIN: Pool B parallel state (plain data; no dual_pool type here
+    // so global_state.h stays include-light for the asic/connect components)
     esp_transport_handle_t transportB;
     work_queue stratum_queueB;
     char * extranonce_strB;
@@ -208,6 +209,7 @@ typedef struct
     bool dual_enable;
     uint16_t dual_interval_ms;
     uint8_t  dual_ratio_a;
+    // DUAL-POOL END
 
     stratum_protocol_t stratum_protocol;
     struct sv2_conn *sv2_conn;

@@ -60,14 +60,16 @@ void create_jobs_task(void *pvParameters)
     uint64_t extranonce_2 = 0;
     int timeout_ms = ASIC_get_asic_job_frequency_ms(GLOBAL_STATE);
 
-    // ---- Dual mining: Pool B parallel pipeline (V1 only). Scheduler is local to
+    // DUAL-POOL BEGIN: Pool B parallel pipeline (V1 only). Scheduler is local to
     // this task so global_state.h stays include-light. current_work_B mirrors the
     // Pool A "keep last notify and re-roll extranonce" behavior so Pool B stays fed
-    // between notifies. ----
+    // between notifies.
     pool_scheduler_t scheduler;
     bool sched_inited = false;
+    bool vmask_warned = false;
     void *current_work_B = NULL;
     uint64_t extranonce_2_B = 0;
+    // DUAL-POOL END
 
     ESP_LOGI(TAG, "ASIC Job Interval: %d ms", timeout_ms);
     ESP_LOGI(TAG, "ASIC Ready!");
@@ -182,13 +184,25 @@ void create_jobs_task(void *pvParameters)
             continue;
         }
 
-        // ---- Dual mining: for the V1 path, let the weighted scheduler decide whether
-        // this job goes to Pool B. SV2 always stays Pool A. ----
+        // DUAL-POOL BEGIN: for the V1 path, let the weighted scheduler decide whether
+        // this job goes to Pool B. SV2 always stays Pool A.
         if (GLOBAL_STATE->dual_enable && active_protocol == STRATUM_PROTOCOL_V1) {
             if (!sched_inited) {
                 pool_scheduler_init(&scheduler, GLOBAL_STATE->dual_ratio_a,
                                     GLOBAL_STATE->dual_interval_ms, esp_timer_get_time());
                 sched_inited = true;
+            }
+            // The ASIC rolls versions using Pool A's version_mask (ASIC_set_version_mask
+            // is only ever called for Pool A). If Pool B negotiates a different rolling
+            // mask, its rolled versions won't match its midstates -> reject storm. Warn
+            // once. Virtually all pools use the standard mask so this normally never fires.
+            if (!vmask_warned && GLOBAL_STATE->version_mask && GLOBAL_STATE->version_maskB
+                    && GLOBAL_STATE->version_mask != GLOBAL_STATE->version_maskB) {
+                ESP_LOGW(TAG, "Pool A version_mask %08lx != Pool B %08lx; the ASIC rolls "
+                              "versions with Pool A's mask, so Pool B may reject shares.",
+                         (unsigned long)GLOBAL_STATE->version_mask,
+                         (unsigned long)GLOBAL_STATE->version_maskB);
+                vmask_warned = true;
             }
             pool_id_t sel = pool_scheduler_select(&scheduler, esp_timer_get_time());
             if (sel == POOL_B) {
@@ -212,6 +226,7 @@ void create_jobs_task(void *pvParameters)
                 // No Pool B work available yet -> donate this slice to Pool A (fall through).
             }
         }
+        // DUAL-POOL END
 
         // Generate and send job
         if (active_protocol == STRATUM_PROTOCOL_V2) {

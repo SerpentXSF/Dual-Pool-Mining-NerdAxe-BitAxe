@@ -32,10 +32,11 @@ static RequestTiming *request_timings = NULL;
 
 static RequestTiming* get_request_timing(int request_id) {
     if (request_id < 0) return NULL;
-    // Dual mining: a second stratum connection may transmit before the primary
+    // DUAL-POOL BEGIN: a second stratum connection may transmit before the primary
     // task has allocated request_timings. Guard against a NULL deref; response-time
     // tracking is only consumed by the primary task, so returning NULL is safe.
     if (request_timings == NULL) return NULL;
+    // DUAL-POOL END
     int index = request_id % MAX_REQUEST_IDS;
     return &request_timings[index];
 }
@@ -215,77 +216,9 @@ char * STRATUM_V1_receive_jsonrpc_line(esp_transport_handle_t transport)
     return line;
 }
 
-// ---- Reentrant receive for dual mining ----
-// A copy of the receive loop that operates on a caller-owned buffer instead of
-// the global json_rpc_buffer, so a second concurrent stratum connection (Pool B)
-// never corrupts the primary connection's accumulator. The primary path
-// (STRATUM_V1_receive_jsonrpc_line above) is left byte-for-byte unchanged.
-static void realloc_json_buffer_ctx(char **bufp, size_t *sizep, size_t len)
-{
-    size_t old = strlen(*bufp);
-    size_t neu = old + len + 1;
-    if (neu < *sizep) {
-        return;
-    }
-    neu = neu + (BUFFER_SIZE - (neu % BUFFER_SIZE));
-    void *nb = realloc(*bufp, neu);
-    if (nb == NULL) {
-        ESP_LOGE(TAG, "Restarting System because of ERROR: realloc failed in ctx receive");
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-        esp_restart();
-    }
-    *bufp = nb;
-    memset(*bufp + old, 0, neu - old);
-    *sizep = neu;
-}
-
-char *STRATUM_V1_receive_jsonrpc_line_ctx(esp_transport_handle_t transport, char **bufp, size_t *sizep)
-{
-    if (*bufp == NULL) {
-        *bufp = malloc(BUFFER_SIZE);
-        if (*bufp == NULL) {
-            ESP_LOGE(TAG, "Failed to allocate ctx receive buffer");
-            return NULL;
-        }
-        *sizep = BUFFER_SIZE;
-        memset(*bufp, 0, BUFFER_SIZE);
-    }
-
-    char *line = NULL;
-    char recv_buffer[BUFFER_SIZE];
-    int nbytes;
-
-    while (!strstr(*bufp, "\n")) {
-        memset(recv_buffer, 0, BUFFER_SIZE);
-        nbytes = esp_transport_read(transport, recv_buffer, BUFFER_SIZE - 1, TRANSPORT_TIMEOUT_MS);
-        if (nbytes < 0) {
-            ESP_LOGE(TAG, "ctx transport read failed (code: %d)", nbytes);
-            free(*bufp);
-            *bufp = NULL;
-            *sizep = 0;
-            return NULL;
-        }
-        if (nbytes > 0) {
-            realloc_json_buffer_ctx(bufp, sizep, nbytes);
-            strncat(*bufp, recv_buffer, nbytes);
-        }
-    }
-
-    size_t buflen = strlen(*bufp);
-    char *newline_pos = strchr(*bufp, '\n');
-    if (newline_pos) {
-        size_t line_len = newline_pos - *bufp;
-        line = strndup(*bufp, line_len);
-        size_t remaining_len = buflen - line_len - 1;
-        if (remaining_len > 0) {
-            memmove(*bufp, newline_pos + 1, remaining_len);
-            (*bufp)[remaining_len] = '\0';
-        } else {
-            (*bufp)[0] = '\0';
-        }
-    }
-    return line;
-}
+// DUAL-POOL: the reentrant receive (STRATUM_V1_receive_jsonrpc_line_ctx) was moved out
+// of this high-churn upstream file into components/dual_pool/stratum_recv_ctx.c to keep
+// the dual-pool changes off stratum_api.c. See MAINTENANCE.md.
 
 void STRATUM_V1_reset_message(StratumApiV1Message *message)
 {
