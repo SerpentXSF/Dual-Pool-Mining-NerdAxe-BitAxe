@@ -1,3 +1,30 @@
 /* You can add global styles to this file, and also import other style files */
 
+/* ============================================================
+   Decentralized Dual Miners — UI polish (safe, non-layout)
+   Global type rendering refinements. These do not change any
+   element sizes or positions; they only sharpen rendering and
+   make the changing metric digits align cleanly.
+   ============================================================ */
 
+html, body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Tabular (monospaced) figures so live-updating numbers — hashrate,
+   difficulty, voltages, temps — don't jitter as digits change width. */
+.pool-summary-square__hashrate-main,
+.pool-summary-square__hashrate-main-value,
+.pool-summary-square__hashrate-expected,
+.pool-summary-square__uptime,
+.pool-tile-metricbar__value,
+.pool-tile-metricbar__shares-value,
+.bar-value, .bar-label,
+.metric-square__value, .metric-square__unit,
+.square-value, .square-unit,
+.hashrate-main, .hashrate-main-value {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}

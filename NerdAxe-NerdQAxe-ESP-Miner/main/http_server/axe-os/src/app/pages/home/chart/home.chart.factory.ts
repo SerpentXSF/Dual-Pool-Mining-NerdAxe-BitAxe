@@ -44,6 +44,13 @@ export function createHomeChartConfig(deps: HomeChartFactoryDeps): HomeChartConf
       legend: {
         labels: {
           // color set by theme helper
+          // UI polish: larger, better-spaced legend with clean point markers.
+          font: { size: 13, weight: '500' },
+          padding: 16,
+          boxWidth: 12,
+          boxHeight: 12,
+          usePointStyle: true,
+          pointStyle: 'rectRounded',
           sort: (a: any, b: any) => a.datasetIndex - b.datasetIndex,
           filter: (legendItem: any, data: any) => {
             const ds = data?.datasets?.[legendItem?.datasetIndex];
