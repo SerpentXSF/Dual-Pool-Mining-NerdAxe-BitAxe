@@ -199,4 +199,4 @@ monBtn.addEventListener("click", openMonitor);
 monStop.addEventListener("click", closeMonitor);
 logClear.addEventListener("click", () => { logEl.textContent = ""; });
 
-logln("Ready. Pick a device preset, choose your .bin, and click Connect & Flash.");
+logln("Ready — flasher build v2 (binary-string fix). Pick a preset, choose your .bin, and click Connect & Flash.");
