@@ -213,8 +213,8 @@ static void system_api_add_config(cJSON *root, GlobalState *g) {
 
     cJSON_AddStringToObject(root, "poolBConnectionInfo", g->SYSTEM_MODULE.poolB_connection_info);
     cJSON_AddNumberToObject(root, "poolBIsUsingFailover", g->SYSTEM_MODULE.poolB_is_using_failover ? 1 : 0);
-    cJSON_AddNumberToObject(root, "poolASharesAccepted", (double)g->SYSTEM_MODULE.poolA_shares_accepted);
-    cJSON_AddNumberToObject(root, "poolASharesRejected", (double)g->SYSTEM_MODULE.poolA_shares_rejected);
+    cJSON_AddNumberToObject(root, "poolASharesAccepted", (double)g->SYSTEM_MODULE.shares_accepted);
+    cJSON_AddNumberToObject(root, "poolASharesRejected", (double)g->SYSTEM_MODULE.shares_rejected);
     cJSON_AddNumberToObject(root, "poolBSharesAccepted", (double)g->SYSTEM_MODULE.poolB_shares_accepted);
     cJSON_AddNumberToObject(root, "poolBSharesRejected", (double)g->SYSTEM_MODULE.poolB_shares_rejected);
 

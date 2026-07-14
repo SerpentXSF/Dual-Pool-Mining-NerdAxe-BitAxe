@@ -111,8 +111,6 @@ typedef struct
     char * poolB_fb_pass;
     uint16_t poolB_fb_tls;
     bool poolB_is_using_failover;
-    uint64_t poolA_shares_accepted;
-    uint64_t poolA_shares_rejected;
     uint64_t poolB_shares_accepted;
     uint64_t poolB_shares_rejected;
     char poolB_connection_info[64];

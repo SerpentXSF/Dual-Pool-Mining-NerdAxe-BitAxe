@@ -95,8 +95,6 @@ void SYSTEM_init_system(GlobalState * GLOBAL_STATE)
     module->poolB_fb_pass = nvs_config_get_string(NVS_CONFIG_POOLB_FB_PASS);
     module->poolB_fb_tls  = nvs_config_get_u16(NVS_CONFIG_POOLB_FB_TLS);
     module->poolB_is_using_failover = false;
-    module->poolA_shares_accepted = 0;
-    module->poolA_shares_rejected = 0;
     module->poolB_shares_accepted = 0;
     module->poolB_shares_rejected = 0;
     module->poolB_connection_info[0] = '\0';
