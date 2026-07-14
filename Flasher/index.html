@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Decentralized Dual Miners — USB Flasher</title>
+<style>
+  :root {
+    --bg: #0f1420; --panel: #171e2e; --panel2: #1e2740; --line: #2a3550;
+    --fg: #e6ecf7; --muted: #93a1bd; --accent: #4c8dff; --accent2: #2fbf71;
+    --warn: #ffb020; --err: #ff5c68; --mono: ui-monospace, "Cascadia Code", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+         font: 15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  header { padding: 20px 24px; border-bottom: 1px solid var(--line);
+           display: flex; align-items: center; gap: 14px; }
+  header h1 { font-size: 18px; margin: 0; font-weight: 650; }
+  header .sub { color: var(--muted); font-size: 13px; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 24px; display: grid; gap: 20px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+  .card h2 { margin: 0 0 14px; font-size: 15px; font-weight: 650; letter-spacing: .2px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 12px 0 6px; }
+  select, input[type=text], input[type=number] {
+    width: 100%; background: var(--panel2); color: var(--fg); border: 1px solid var(--line);
+    border-radius: 8px; padding: 10px 12px; font-size: 14px; font-family: inherit; }
+  input[type=file] { width: 100%; color: var(--muted); font-size: 13px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  button { cursor: pointer; border: none; border-radius: 8px; padding: 11px 18px;
+           font-size: 14px; font-weight: 600; color: #fff; background: var(--accent); }
+  button.secondary { background: var(--panel2); border: 1px solid var(--line); color: var(--fg); }
+  button.green { background: var(--accent2); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .btns { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+  .bar { height: 10px; background: var(--panel2); border-radius: 6px; overflow: hidden; margin-top: 14px; }
+  .bar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg,var(--accent),var(--accent2)); transition: width .2s; }
+  .status { font-size: 13px; color: var(--muted); margin-top: 8px; min-height: 18px; }
+  pre.log { background: #0a0e17; border: 1px solid var(--line); border-radius: 8px; padding: 12px;
+            font: 12.5px/1.45 var(--mono); color: #cbd5e8; height: 260px; overflow: auto; white-space: pre-wrap;
+            margin: 14px 0 0; }
+  .note { font-size: 12.5px; color: var(--muted); }
+  .banner { border-radius: 10px; padding: 12px 14px; font-size: 13px; margin-bottom: 4px; }
+  .banner.warn { background: rgba(255,176,32,.12); border: 1px solid var(--warn); color: #ffd27a; }
+  .banner.err  { background: rgba(255,92,104,.12); border: 1px solid var(--err); color: #ff9aa2; }
+  code { font-family: var(--mono); background: var(--panel2); padding: 1px 5px; border-radius: 4px; }
+  .pill { display:inline-block; font-size:11px; padding:2px 8px; border-radius:20px; background:var(--panel2); border:1px solid var(--line); color:var(--muted); }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <div style="font-size:22px">⛏️</div>
+  <div>
+    <h1>Decentralized Dual Miners — USB Flasher</h1>
+    <div class="sub">Flash BitAxe · NerdAxe · NerdQAxe · NerdMiner_v2 over USB (Web Serial). No install beyond a browser.</div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div id="compat" class="banner err" hidden></div>
+
+  <div class="card">
+    <h2>1 · Device &amp; firmware</h2>
+    <label for="preset">Device preset</label>
+    <select id="preset"></select>
+    <p class="note" id="presetNote" style="margin-top:8px"></p>
+
+    <div class="row" style="margin-top:6px">
+      <div>
+        <label for="file">Firmware image (.bin)</label>
+        <input type="file" id="file" accept=".bin" />
+      </div>
+      <div>
+        <label for="offset">Flash offset</label>
+        <input type="text" id="offset" value="0x0" />
+      </div>
+    </div>
+
+    <label for="baud">Baud rate</label>
+    <select id="baud">
+      <option value="921600">921600 (fast)</option>
+      <option value="460800">460800</option>
+      <option value="115200">115200 (most compatible)</option>
+    </select>
+
+    <label style="margin-top:14px"><input type="checkbox" id="eraseAll" style="width:auto;margin-right:6px" /> Erase entire flash first (wipes saved Wi-Fi/pool config)</label>
+
+    <div class="btns">
+      <button id="flashBtn" class="green">Connect &amp; Flash</button>
+      <button id="eraseBtn" class="secondary">Erase Flash Only</button>
+    </div>
+    <div class="bar"><i id="bar"></i></div>
+    <div class="status" id="status">Idle.</div>
+  </div>
+
+  <div class="card">
+    <h2>2 · Serial Monitor <span class="pill">verify boot &amp; pool connect</span></h2>
+    <p class="note">After flashing, watch the boot log — you should see both stratum tasks connect (dual mode) and shares being accepted.</p>
+    <div class="btns" style="margin-top:6px">
+      <button id="monBtn" class="secondary">Open Serial Monitor (115200)</button>
+      <button id="monStop" class="secondary" disabled>Stop</button>
+      <button id="logClear" class="secondary">Clear Log</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Console</h2>
+    <pre class="log" id="log"></pre>
+  </div>
+
+  <div class="card">
+    <h2>Notes</h2>
+    <ul class="note" style="margin:0;padding-left:18px">
+      <li>Requires <b>Chrome</b> or <b>Edge</b> on desktop, served from <code>http://localhost</code> (run <code>python serve.py</code>). Web Serial does not work from <code>file://</code> or in Firefox/Safari.</li>
+      <li>Use the device's <b>USB (USB-JTAG/serial)</b> port. If the port isn't listed, install the USB-serial driver for your board.</li>
+      <li>Merged <b>factory</b> images flash at <code>0x0</code>. If you only have a plain app <code>firmware.bin</code>, flash it at <code>0x10000</code> (and bootloader at <code>0x0</code>, partitions at <code>0x8000</code> separately).</li>
+      <li>Stuck at connect? Hold <b>BOOT</b>, tap <b>RESET</b>, release <b>BOOT</b> to enter download mode, then retry.</li>
+    </ul>
+  </div>
+</div>
+
+<script type="module" src="./flasher.js"></script>
+</body>
+</html>
