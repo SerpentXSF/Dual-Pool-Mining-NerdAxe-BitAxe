@@ -8,6 +8,7 @@
 
 #include "asic_result_task.h"
 #include "create_jobs_task.h"
+#include "stratum_poolb_task.h"
 #include "hashrate_monitor_task.h"
 #include "fan_controller_task.h"
 #include "statistics_task.h"
@@ -183,6 +184,10 @@ void app_main(void)
             }
             if (xTaskCreate(ASIC_result_task, "asic result", 8192, (void *) &GLOBAL_STATE, 15, NULL) != pdPASS) {
                 ESP_LOGE(TAG, "Error creating asic result task");
+            }
+            // Dual mining: Pool B stratum task (self-gates on dual_enable; idles when off)
+            if (xTaskCreate(stratum_poolb_task, "stratum poolb", 8192, (void *) &GLOBAL_STATE, 12, NULL) != pdPASS) {
+                ESP_LOGE(TAG, "Error creating stratum poolb task");
             }
 
             if (xTaskCreateWithCaps(hashrate_monitor_task, "hashrate monitor", 8192, (void *) &GLOBAL_STATE, 5, NULL, MALLOC_CAP_SPIRAM) != pdPASS) {

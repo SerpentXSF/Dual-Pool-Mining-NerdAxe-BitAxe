@@ -201,7 +201,8 @@ void create_jobs_task(void *pvParameters)
                     current_work_B = bwork;
                     extranonce_2_B = 0;
                 }
-                if (current_work_B != NULL && GLOBAL_STATE->extranonce_strB != NULL) {
+                if (current_work_B != NULL && GLOBAL_STATE->extranonce_strB != NULL
+                        && GLOBAL_STATE->pool_difficultyB > 0) {
                     generate_work(GLOBAL_STATE, (mining_notify *)current_work_B,
                                   extranonce_2_B, GLOBAL_STATE->pool_difficultyB, POOL_B);
                     extranonce_2_B++;
