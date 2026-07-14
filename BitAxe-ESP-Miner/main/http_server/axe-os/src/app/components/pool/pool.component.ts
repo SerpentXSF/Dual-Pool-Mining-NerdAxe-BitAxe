@@ -112,7 +112,36 @@ export class PoolComponent implements OnInit {
           fallbackStratumProtocol: [info.fallbackStratumProtocol || 'SV1'],
           fallbackStratumV2AuthorityPubkey: [info.fallbackStratumV2AuthorityPubkey || '', [this.base58Validator()]],
           stratumV2ChannelType: [info.stratumV2ChannelType || 'standard'],
-          fallbackStratumV2ChannelType: [info.fallbackStratumV2ChannelType || 'standard']
+          fallbackStratumV2ChannelType: [info.fallbackStratumV2ChannelType || 'standard'],
+
+          // ---- Dual mining (Pool B active pool + controls). Field keys match the
+          // firmware NVS rest_name values so the table-driven PATCH persists them.
+          // info is read via bracket notation so the generated model need not change. ----
+          dualEnable: [(info as any)['dualEnable'] == true],
+          dualIntervalMs: [(info as any)['dualIntervalMs'] ?? 500, [
+            Validators.required, Validators.min(100), Validators.max(60000)
+          ]],
+          dualRatioA: [(info as any)['dualRatioA'] ?? 50, [
+            Validators.required, Validators.min(0), Validators.max(100)
+          ]],
+          poolBUrl: [(info as any)['poolBUrl'] || '', [
+            Validators.pattern(/^(?!.*stratum\+tcp:\/\/)(?!.*:[1-9]\d{0,4}$).*$/)
+          ]],
+          poolBPort: [(info as any)['poolBPort'] ?? 3333, [
+            Validators.pattern(/^[^:]*$/), Validators.min(0), Validators.max(65535)
+          ]],
+          poolBUser: [(info as any)['poolBUser'] || ''],
+          poolBPassword: ['*****'],
+          poolBTLS: [(info as any)['poolBTLS'] || 0],
+          poolBFallbackUrl: [(info as any)['poolBFallbackUrl'] || '', [
+            Validators.pattern(/^(?!.*stratum\+tcp:\/\/)(?!.*:[1-9]\d{0,4}$).*$/)
+          ]],
+          poolBFallbackPort: [(info as any)['poolBFallbackPort'] ?? 3333, [
+            Validators.pattern(/^[^:]*$/), Validators.min(0), Validators.max(65535)
+          ]],
+          poolBFallbackUser: [(info as any)['poolBFallbackUser'] || ''],
+          poolBFallbackPassword: ['*****'],
+          poolBFallbackTLS: [(info as any)['poolBFallbackTLS'] || 0]
         });
 
         const setupTlsValidation = (tlsControlName: string, certControlName: string) => {
@@ -148,6 +177,13 @@ export class PoolComponent implements OnInit {
     }
     if (form.fallbackStratumPassword === '*****') {
       delete form.fallbackStratumPassword;
+    }
+    // Dual mining: only send Pool B passwords if the user actually changed them.
+    if (form.poolBPassword === '*****') {
+      delete form.poolBPassword;
+    }
+    if (form.poolBFallbackPassword === '*****') {
+      delete form.poolBFallbackPassword;
     }
 
     this.systemService.updateSystem(this.uri, form)

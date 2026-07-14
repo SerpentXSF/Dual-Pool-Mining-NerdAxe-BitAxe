@@ -187,6 +187,37 @@ static void system_api_add_config(cJSON *root, GlobalState *g) {
     cJSON_AddStringToObject(root, "stratumV2AuthorityPubkey", sv2AuthPubkey ? sv2AuthPubkey : "");
     free(sv2AuthPubkey);
 
+    // ---- Dual mining (Pool B + controls). Passwords are never emitted, matching
+    // the primary/fallback pools. ----
+    cJSON_AddBoolToObject(root, "dualEnable", nvs_config_get_bool(NVS_CONFIG_DUAL_ENABLE));
+    cJSON_AddNumberToObject(root, "dualIntervalMs", nvs_config_get_u16(NVS_CONFIG_DUAL_INTERVAL_MS));
+    cJSON_AddNumberToObject(root, "dualRatioA", nvs_config_get_u16(NVS_CONFIG_DUAL_RATIO_A));
+
+    char *pb_url = nvs_config_get_string(NVS_CONFIG_POOLB_URL);
+    cJSON_AddStringToObject(root, "poolBUrl", pb_url ? pb_url : "");
+    free(pb_url);
+    cJSON_AddNumberToObject(root, "poolBPort", nvs_config_get_u16(NVS_CONFIG_POOLB_PORT));
+    char *pb_user = nvs_config_get_string(NVS_CONFIG_POOLB_USER);
+    cJSON_AddStringToObject(root, "poolBUser", pb_user ? pb_user : "");
+    free(pb_user);
+    cJSON_AddNumberToObject(root, "poolBTLS", nvs_config_get_u16(NVS_CONFIG_POOLB_TLS));
+
+    char *pbf_url = nvs_config_get_string(NVS_CONFIG_POOLB_FB_URL);
+    cJSON_AddStringToObject(root, "poolBFallbackUrl", pbf_url ? pbf_url : "");
+    free(pbf_url);
+    cJSON_AddNumberToObject(root, "poolBFallbackPort", nvs_config_get_u16(NVS_CONFIG_POOLB_FB_PORT));
+    char *pbf_user = nvs_config_get_string(NVS_CONFIG_POOLB_FB_USER);
+    cJSON_AddStringToObject(root, "poolBFallbackUser", pbf_user ? pbf_user : "");
+    free(pbf_user);
+    cJSON_AddNumberToObject(root, "poolBFallbackTLS", nvs_config_get_u16(NVS_CONFIG_POOLB_FB_TLS));
+
+    cJSON_AddStringToObject(root, "poolBConnectionInfo", g->SYSTEM_MODULE.poolB_connection_info);
+    cJSON_AddNumberToObject(root, "poolBIsUsingFailover", g->SYSTEM_MODULE.poolB_is_using_failover ? 1 : 0);
+    cJSON_AddNumberToObject(root, "poolASharesAccepted", (double)g->SYSTEM_MODULE.poolA_shares_accepted);
+    cJSON_AddNumberToObject(root, "poolASharesRejected", (double)g->SYSTEM_MODULE.poolA_shares_rejected);
+    cJSON_AddNumberToObject(root, "poolBSharesAccepted", (double)g->SYSTEM_MODULE.poolB_shares_accepted);
+    cJSON_AddNumberToObject(root, "poolBSharesRejected", (double)g->SYSTEM_MODULE.poolB_shares_rejected);
+
     char *sv2_chan_type = nvs_config_get_string(NVS_CONFIG_SV2_CHANNEL_TYPE);
     cJSON_AddStringToObject(root, "stratumV2ChannelType", sv2_chan_type ? sv2_chan_type : SV2_CHANNEL_TYPE_EXTENDED);
     free(sv2_chan_type);
