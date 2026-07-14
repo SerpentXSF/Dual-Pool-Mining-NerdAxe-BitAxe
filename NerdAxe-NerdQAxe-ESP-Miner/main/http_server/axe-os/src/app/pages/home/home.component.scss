@@ -53,6 +53,9 @@ nb-card-body.pool-tile-card__body{
   padding: 12px !important;
   margin: 0 !important;
   background: var(--tile-surface);
+  /* UI polish: subtle hairline for tile definition (inset = no layout shift;
+     transparent fallback leaves light themes untouched). */
+  box-shadow: inset 0 0 0 1px var(--tile-hairline, transparent);
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -1357,7 +1360,12 @@ nb-card-header{
 
   /* Units (suffixes like MHz, V, A, W, °C, %) should be quieter than the numbers */
   /* Unify all quiet labels/suffixes (units, hints, A1/A2 glyph labels) */
-  --unit-color: #C2C8D7;
+  /* UI polish: lifted a touch for better contrast on the dark surfaces. */
+  --unit-color: #D3D9E7;
+
+  /* UI polish: subtle hairline to give tiles/cards definition against the dark bg
+     (applied as an inset box-shadow, so it never shifts layout). */
+  --tile-hairline: rgba(255, 255, 255, 0.07);
   /* Main hashrate unit should be theme-aware (dark/cosmic follow unit tone). */
   --hashrate-main-unit-color: var(--unit-color);
 
