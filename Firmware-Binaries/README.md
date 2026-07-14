@@ -39,12 +39,22 @@ Then configure dual mining in the web UI (see `../FLASHING_AND_VERIFICATION.md`)
 Built from `NerdAxe-NerdQAxe-ESP-Miner/` (unmodified fork; dual-pool + password are
 native). Flash the factory bin at offset **`0x0`**.
 
-| File | Device | Flash offset | Size |
-|------|--------|--------------|------|
-| `NerdAxe/esp-miner-factory-nerdaxe.bin` | NerdAxe | `0x0` | 15.8 MB |
-| `NerdAxe/esp-miner-ota-nerdaxe.bin` | NerdAxe (web OTA) | via UI | 1.7 MB |
-| `NerdQAxe/esp-miner-factory-nerdqaxeplus.bin` | NerdQAxe+ | `0x0` | 15.8 MB |
-| `NerdQAxe/esp-miner-ota-nerdqaxeplus.bin` | NerdQAxe+ (web OTA) | via UI | 1.7 MB |
+| File | Device | How to apply |
+|------|--------|--------------|
+| `NerdAxe/esp-miner-factory-nerdaxe.bin` | NerdAxe | USB flash @ `0x0` (one-time bootstrap) |
+| `NerdAxe/esp-miner-nerdaxe.bin` | NerdAxe | **OTA firmware** — Settings → Manual Update → Firmware |
+| `NerdAxe/www.bin` | NerdAxe | **OTA web UI** — Settings → Manual Update → Web UI |
+| `NerdQAxe/esp-miner-factory-nerdqaxeplus.bin` | NerdQAxe+ | USB flash @ `0x0` |
+| `NerdQAxe/esp-miner-ota-nerdqaxeplus.bin` | NerdQAxe+ | OTA app bin |
+
+### OTA workflow (NerdAxe)
+This build adds a **Manual Update (upload .bin)** section under **Settings → Release &
+Update**. USB-flash `esp-miner-factory-nerdaxe.bin` **once** to get it; after that,
+update over the air with **no USB**:
+- Dashboard/UI change → upload **`www.bin`** (Web UI).
+- Firmware change → upload **`esp-miner-nerdaxe.bin`** (Firmware; the device reboots).
+The upload filenames must match exactly (`www.bin`, `esp-miner-nerdaxe.bin`). OTP is
+optional — uploads work without it.
 
 **SHA-256 (factory)**
 ```
