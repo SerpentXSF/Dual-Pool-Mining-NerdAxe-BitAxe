@@ -126,6 +126,51 @@ Web-UI: {{ currentWebVersion }}<br/>
         </div>
       </div>
 
+      <hr style="border-color: var(--card-divider-color); margin: 20px 0; opacity:1.0;" />
+
+      <!-- Manual OTA update: upload a .bin from your computer (no GitHub needed) -->
+      <div class="manual-update-section">
+        <div style="font-weight:600; margin-bottom:4px;">Manual Update (upload&nbsp;.bin)</div>
+        <div style="font-size:11.5px; opacity:0.65; margin-bottom:12px;">
+          Update over the air from a local file. To update only the dashboard, upload
+          <code>www.bin</code>. Firmware updates reboot the device.
+        </div>
+
+        <!-- Firmware -->
+        <div class="d-flex align-items-center justify-content-between mt-2" style="gap:12px; flex-wrap:wrap;">
+          <div style="flex:1 1 auto; min-width:220px;">
+            <label style="display:block; font-size:12px; opacity:0.85; margin-bottom:4px;">Firmware &mdash; select <code>{{ expectedFileName }}</code></label>
+            <input type="file" accept=".bin" (change)="onFirmwareFileSelected($event)" />
+          </div>
+          <button nbButton status="primary" size="small" [nbSpinner]="isFirmwareUploading"
+                  [disabled]="isFirmwareUploading || !selectedFirmwareFile" (click)="uploadFirmwareFile()">
+            <nb-icon icon="upload-outline" pack="eva"></nb-icon>&nbsp;Update Firmware
+          </button>
+        </div>
+        <div class="progress-wrapper" *ngIf="isFirmwareUploading || firmwareUpdateProgress > 0">
+          <nb-progress-bar [value]="firmwareUpdateProgress"
+            [status]="firmwareUpdateProgress >= 100 ? 'success' : 'info'" [displayValue]="true" size="small">
+          </nb-progress-bar>
+        </div>
+
+        <!-- Web UI -->
+        <div class="d-flex align-items-center justify-content-between mt-3" style="gap:12px; flex-wrap:wrap;">
+          <div style="flex:1 1 auto; min-width:220px;">
+            <label style="display:block; font-size:12px; opacity:0.85; margin-bottom:4px;">Web UI &mdash; select <code>www.bin</code></label>
+            <input type="file" accept=".bin" (change)="onWebsiteFileSelected($event)" />
+          </div>
+          <button nbButton status="primary" size="small" [nbSpinner]="isWebsiteUploading"
+                  [disabled]="isWebsiteUploading || !selectedWebsiteFile" (click)="uploadWebsiteFile()">
+            <nb-icon icon="upload-outline" pack="eva"></nb-icon>&nbsp;Update Web UI
+          </button>
+        </div>
+        <div class="progress-wrapper" *ngIf="isWebsiteUploading || websiteUpdateProgress > 0">
+          <nb-progress-bar [value]="websiteUpdateProgress"
+            [status]="websiteUpdateProgress >= 100 ? 'success' : 'info'" [displayValue]="true" size="small">
+          </nb-progress-bar>
+        </div>
+      </div>
+
     </nb-card-body>
   </nb-card>
 
