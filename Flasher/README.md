@@ -1,6 +1,6 @@
 # Decentralized Dual Miners — Local USB Flasher
 
-A **locally-run** web dashboard to flash BitAxe / NerdAxe / NerdQAxe / NerdMiner_v2
+A **locally-run** web dashboard to flash BitAxe / NerdAxe / NerdQAxe
 over the USB (USB-JTAG/serial) port — the same technique the online flashers
 ([bitaxe-web-flasher](https://bitaxeorg.github.io/bitaxe-web-flasher/),
 [flasher.bitronics.store](https://flasher.bitronics.store/)) use: the browser's
@@ -42,7 +42,6 @@ You build them (this environment can't):
 | BitAxe | `cd ../BitAxe-ESP-Miner && idf.py build` | `build/esp-miner-factory-*.bin` @ `0x0` |
 | NerdAxe | `cd ../NerdAxe-NerdQAxe-ESP-Miner && BOARD=NERDAXE idf.py build` | factory/merged bin @ `0x0` |
 | NerdQAxe | `… BOARD=NERDQAXEPLUS idf.py build` | factory/merged bin @ `0x0` |
-| NerdMiner_v2 | `cd ../NerdMiner_v2 && pio run -e <env>` | `.pio/build/<env>/` merged bin @ `0x0` |
 
 Full step-by-step (with post-flash dual-mining verification) is in
 [../FLASHING_AND_VERIFICATION.md](../FLASHING_AND_VERIFICATION.md).

@@ -25,8 +25,6 @@ const PRESETS = [
     offset: "0x0", note: "Build with BOARD=NERDAXE. Select the merged/factory bin. Flashes at 0x0." },
   { id: "nerdqaxe",  name: "NerdQAxe / NerdQAxe+ (ESP32-S3) — factory .bin @ 0x0",
     offset: "0x0", note: "Build with BOARD=NERDQAXEPLUS (or NERDQAXEPLUS2). Select the merged/factory bin. Flashes at 0x0." },
-  { id: "nerdminer", name: "NerdMiner_v2 (ESP32/S3) — merged .bin @ 0x0",
-    offset: "0x0", note: "From .pio/build/<env>/. If you only have firmware.bin (not merged), use offset 0x10000 and flash bootloader/partitions separately." },
   { id: "custom",    name: "Custom — choose file and offset",
     offset: "0x0", note: "Pick any .bin and set the flash offset manually." },
 ];
@@ -199,4 +197,4 @@ monBtn.addEventListener("click", openMonitor);
 monStop.addEventListener("click", closeMonitor);
 logClear.addEventListener("click", () => { logEl.textContent = ""; });
 
-logln("Ready — flasher build v2 (binary-string fix). Pick a preset, choose your .bin, and click Connect & Flash.");
+logln("Ready — flasher build v3. Pick a preset, choose your .bin, and click Connect & Flash.");
