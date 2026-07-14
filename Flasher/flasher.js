@@ -3,6 +3,19 @@
 // Runs entirely in the browser; nothing is uploaded anywhere.
 
 import { ESPLoader, Transport } from "https://cdn.jsdelivr.net/npm/esptool-js@0.5.4/+esm";
+import CryptoJS from "https://cdn.jsdelivr.net/npm/crypto-js@4.2.0/+esm";
+
+// esptool-js@0.5.4 expects flash `data` as a *binary string* (one char per byte),
+// not a Uint8Array — its writeFlash calls .charCodeAt on it. Convert in chunks so
+// large images (15+ MB) don't blow the call stack via String.fromCharCode(...spread).
+function toBinaryString(u8) {
+  let out = "";
+  const CHUNK = 0x8000;
+  for (let i = 0; i < u8.length; i += CHUNK) {
+    out += String.fromCharCode.apply(null, u8.subarray(i, Math.min(i + CHUNK, u8.length)));
+  }
+  return out;
+}
 
 // ---- device presets ---------------------------------------------------------
 const PRESETS = [
@@ -100,8 +113,9 @@ async function doFlash() {
 
   busy(true); setProgress(0); setStatus("Reading firmware...");
   try {
-    const data = new Uint8Array(await file.arrayBuffer());
-    logln(`\nFlashing ${file.name} (${data.length.toLocaleString()} bytes) @ 0x${address.toString(16)}`);
+    const u8 = new Uint8Array(await file.arrayBuffer());
+    const data = toBinaryString(u8); // esptool-js@0.5.4 wants a binary string
+    logln(`\nFlashing ${file.name} (${u8.length.toLocaleString()} bytes) @ 0x${address.toString(16)}`);
     await withLoader(async (esploader) => {
       await esploader.writeFlash({
         fileArray: [{ data, address }],
@@ -115,6 +129,7 @@ async function doFlash() {
           setProgress(pct);
           setStatus(`Writing... ${pct}%`);
         },
+        calculateMD5Hash: (image) => CryptoJS.MD5(CryptoJS.enc.Latin1.parse(image)).toString(),
       });
     });
     setProgress(100); setStatus("✅ Flash complete.");
