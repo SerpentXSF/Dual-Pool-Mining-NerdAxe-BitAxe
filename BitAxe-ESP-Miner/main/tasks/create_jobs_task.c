@@ -16,13 +16,14 @@
 #include "stratum_api.h"
 #include "stratum_v2_task.h"
 #include "utils.h"
+#include "pool_scheduler.h"
 
 static const char *TAG = "create_jobs_task";
 
 #define MAX_EXTRANONCE2_LEN 32
 #define MAX_EXTRANONCE2_STR (MAX_EXTRANONCE2_LEN * 2 + 1)
 
-static void generate_work(GlobalState *GLOBAL_STATE, mining_notify *notification, uint64_t extranonce_2, double difficulty);
+static void generate_work(GlobalState *GLOBAL_STATE, mining_notify *notification, uint64_t extranonce_2, double difficulty, uint8_t pool_id);
 static void generate_work_sv2(GlobalState *GLOBAL_STATE, sv2_job_t *job, double difficulty);
 static void generate_work_sv2_ext(GlobalState *GLOBAL_STATE, sv2_ext_job_t *job, double difficulty, uint64_t extranonce_2_counter);
 
@@ -58,6 +59,15 @@ void create_jobs_task(void *pvParameters)
     stratum_protocol_t current_work_protocol = GLOBAL_STATE->stratum_protocol;
     uint64_t extranonce_2 = 0;
     int timeout_ms = ASIC_get_asic_job_frequency_ms(GLOBAL_STATE);
+
+    // ---- Dual mining: Pool B parallel pipeline (V1 only). Scheduler is local to
+    // this task so global_state.h stays include-light. current_work_B mirrors the
+    // Pool A "keep last notify and re-roll extranonce" behavior so Pool B stays fed
+    // between notifies. ----
+    pool_scheduler_t scheduler;
+    bool sched_inited = false;
+    void *current_work_B = NULL;
+    uint64_t extranonce_2_B = 0;
 
     ESP_LOGI(TAG, "ASIC Job Interval: %d ms", timeout_ms);
     ESP_LOGI(TAG, "ASIC Ready!");
@@ -172,6 +182,36 @@ void create_jobs_task(void *pvParameters)
             continue;
         }
 
+        // ---- Dual mining: for the V1 path, let the weighted scheduler decide whether
+        // this job goes to Pool B. SV2 always stays Pool A. ----
+        if (GLOBAL_STATE->dual_enable && active_protocol == STRATUM_PROTOCOL_V1) {
+            if (!sched_inited) {
+                pool_scheduler_init(&scheduler, GLOBAL_STATE->dual_ratio_a,
+                                    GLOBAL_STATE->dual_interval_ms, esp_timer_get_time());
+                sched_inited = true;
+            }
+            pool_id_t sel = pool_scheduler_select(&scheduler, esp_timer_get_time());
+            if (sel == POOL_B) {
+                // Refresh Pool B work if a newer notify arrived (non-blocking).
+                void *bwork = queue_dequeue_timeout(&GLOBAL_STATE->stratum_queueB, 0);
+                if (bwork != NULL) {
+                    if (current_work_B != NULL) {
+                        STRATUM_V1_free_mining_notify((mining_notify *)current_work_B);
+                    }
+                    current_work_B = bwork;
+                    extranonce_2_B = 0;
+                }
+                if (current_work_B != NULL && GLOBAL_STATE->extranonce_strB != NULL) {
+                    generate_work(GLOBAL_STATE, (mining_notify *)current_work_B,
+                                  extranonce_2_B, GLOBAL_STATE->pool_difficultyB, POOL_B);
+                    extranonce_2_B++;
+                    timeout_ms = ASIC_get_asic_job_frequency_ms(GLOBAL_STATE);
+                    continue;
+                }
+                // No Pool B work available yet -> donate this slice to Pool A (fall through).
+            }
+        }
+
         // Generate and send job
         if (active_protocol == STRATUM_PROTOCOL_V2) {
             if (stratum_v2_is_extended_channel(GLOBAL_STATE)) {
@@ -181,24 +221,32 @@ void create_jobs_task(void *pvParameters)
                 generate_work_sv2(GLOBAL_STATE, (sv2_job_t *)current_work, difficulty);
             }
         } else {
-            generate_work(GLOBAL_STATE, (mining_notify *)current_work, extranonce_2, difficulty);
+            generate_work(GLOBAL_STATE, (mining_notify *)current_work, extranonce_2, difficulty, POOL_A);
             extranonce_2++;
         }
         timeout_ms = ASIC_get_asic_job_frequency_ms(GLOBAL_STATE);
     }
 }
 
-static void generate_work(GlobalState *GLOBAL_STATE, mining_notify *notification, uint64_t extranonce_2, double difficulty)
+static void generate_work(GlobalState *GLOBAL_STATE, mining_notify *notification, uint64_t extranonce_2, double difficulty, uint8_t pool_id)
 {
-    if (GLOBAL_STATE->extranonce_2_len > MAX_EXTRANONCE2_LEN) {
-        ESP_LOGE(TAG, "extranonce_2_len %d exceeds maximum %d, skipping job", GLOBAL_STATE->extranonce_2_len, MAX_EXTRANONCE2_LEN);
+    // Select the pool-specific extranonce context and version mask.
+    const char *en_str  = (pool_id == POOL_B) ? GLOBAL_STATE->extranonce_strB : GLOBAL_STATE->extranonce_str;
+    int         en2_len = (pool_id == POOL_B) ? GLOBAL_STATE->extranonce_2_lenB : GLOBAL_STATE->extranonce_2_len;
+    uint32_t    vmask   = (pool_id == POOL_B) ? GLOBAL_STATE->version_maskB : GLOBAL_STATE->version_mask;
+
+    if (en2_len > MAX_EXTRANONCE2_LEN) {
+        ESP_LOGE(TAG, "extranonce_2_len %d exceeds maximum %d, skipping job", en2_len, MAX_EXTRANONCE2_LEN);
         return;
     }
+    if (en_str == NULL) {
+        return; // pool not fully subscribed yet
+    }
     char extranonce_2_str[MAX_EXTRANONCE2_STR];
-    extranonce_2_generate(extranonce_2, GLOBAL_STATE->extranonce_2_len, extranonce_2_str);
+    extranonce_2_generate(extranonce_2, en2_len, extranonce_2_str);
 
     uint8_t coinbase_tx_hash[32];
-    calculate_coinbase_tx_hash(notification->coinbase_1, notification->coinbase_2, GLOBAL_STATE->extranonce_str, extranonce_2_str, coinbase_tx_hash);
+    calculate_coinbase_tx_hash(notification->coinbase_1, notification->coinbase_2, en_str, extranonce_2_str, coinbase_tx_hash);
 
     uint8_t merkle_root[32];
     calculate_merkle_root_hash(coinbase_tx_hash, (uint8_t(*)[32])notification->merkle_branches, notification->n_merkle_branches, merkle_root);
@@ -210,11 +258,12 @@ static void generate_work(GlobalState *GLOBAL_STATE, mining_notify *notification
         return;
     }
 
-    construct_bm_job(notification, merkle_root, GLOBAL_STATE->version_mask, difficulty, next_job);
+    construct_bm_job(notification, merkle_root, vmask, difficulty, next_job);
 
     next_job->extranonce2 = strdup(extranonce_2_str);
     next_job->jobid = strdup(notification->job_id);
-    next_job->version_mask = GLOBAL_STATE->version_mask;
+    next_job->version_mask = vmask;
+    next_job->pool_id = pool_id;
 
     // Check if ASIC is initialized before trying to send work
     if (!GLOBAL_STATE->ASIC_initalized) {
@@ -292,6 +341,7 @@ static void generate_work_sv2(GlobalState *GLOBAL_STATE, sv2_job_t *sv2_job, dou
     next_job->jobid = strdup(jobid_str);
     next_job->extranonce2 = strdup(""); // unused in SV2 standard
     next_job->version_mask = version_mask;
+    next_job->pool_id = POOL_A; // SV2 is Pool A only
 
     if (!GLOBAL_STATE->ASIC_initalized) {
         ESP_LOGW(TAG, "ASIC not initialized, skipping SV2 job send");
@@ -398,6 +448,7 @@ static void generate_work_sv2_ext(GlobalState *GLOBAL_STATE, sv2_ext_job_t *ext_
     bin2hex(extranonce_2, extranonce_2_len, en2_hex, sizeof(en2_hex));
     next_job->extranonce2 = strdup(en2_hex);
     next_job->version_mask = version_mask;
+    next_job->pool_id = POOL_A; // SV2 is Pool A only
 
     if (!GLOBAL_STATE->ASIC_initalized) {
         ESP_LOGW(TAG, "ASIC not initialized, skipping SV2 ext job send");

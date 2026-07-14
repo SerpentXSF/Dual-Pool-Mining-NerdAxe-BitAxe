@@ -15,6 +15,7 @@
 #include "freertos/task.h"
 #include "scoreboard.h"
 #include "self_test.h"
+#include "pool_scheduler.h"
 
 static const char *TAG = "asic_result";
 
@@ -77,7 +78,10 @@ void ASIC_result_task(void *pvParameters)
         uint32_t version_bits = asic_result->rolled_version ^ active_job->version;
         if (nonce_diff >= active_job->pool_diff)
         {
-            if (GLOBAL_STATE->stratum_protocol == STRATUM_PROTOCOL_V2) {
+            // Route by the job's originating pool. Pool B is always V1; Pool A
+            // follows the active stratum protocol (V1 or V2).
+            bool is_b = (active_job->pool_id == POOL_B);
+            if (!is_b && GLOBAL_STATE->stratum_protocol == STRATUM_PROTOCOL_V2) {
                 // SV2: submit with binary protocol
                 int ret;
                 uint32_t sv2_job_id = (uint32_t)strtoul(active_job->jobid, NULL, 10);
@@ -106,16 +110,33 @@ void ASIC_result_task(void *pvParameters)
                              ret, errno, strerror(errno));
                 }
             } else {
-                // V1: submit with JSON-RPC
-                char * user = GLOBAL_STATE->SYSTEM_MODULE.is_using_fallback ? GLOBAL_STATE->SYSTEM_MODULE.fallback_pool_user : GLOBAL_STATE->SYSTEM_MODULE.pool_user;
-
-                taskENTER_CRITICAL(&GLOBAL_STATE->stratum_mux);
-                esp_transport_handle_t transport = GLOBAL_STATE->transport;
-                int uid = GLOBAL_STATE->send_uid++;
-                taskEXIT_CRITICAL(&GLOBAL_STATE->stratum_mux);
+                // V1: submit with JSON-RPC, routed to the originating pool.
+                char * user;
+                portMUX_TYPE *mux;
+                esp_transport_handle_t transport;
+                int uid;
+                if (is_b) {
+                    user = GLOBAL_STATE->SYSTEM_MODULE.poolB_is_using_failover
+                             ? GLOBAL_STATE->SYSTEM_MODULE.poolB_fb_user
+                             : GLOBAL_STATE->SYSTEM_MODULE.poolB_user;
+                    mux = &GLOBAL_STATE->stratum_muxB;
+                    taskENTER_CRITICAL(mux);
+                    transport = GLOBAL_STATE->transportB;
+                    uid = GLOBAL_STATE->send_uidB++;
+                    taskEXIT_CRITICAL(mux);
+                } else {
+                    user = GLOBAL_STATE->SYSTEM_MODULE.is_using_fallback
+                             ? GLOBAL_STATE->SYSTEM_MODULE.fallback_pool_user
+                             : GLOBAL_STATE->SYSTEM_MODULE.pool_user;
+                    mux = &GLOBAL_STATE->stratum_mux;
+                    taskENTER_CRITICAL(mux);
+                    transport = GLOBAL_STATE->transport;
+                    uid = GLOBAL_STATE->send_uid++;
+                    taskEXIT_CRITICAL(mux);
+                }
 
                 if (transport == NULL) {
-                    ESP_LOGW(TAG, "No stratum connection, dropping share (job 0x%02X)", job_id);
+                    ESP_LOGW(TAG, "No stratum connection, dropping share (job 0x%02X, pool %c)", job_id, is_b ? 'B' : 'A');
                 } else {
                     uint64_t sent_time_us = 0;
                     int ret = STRATUM_V1_submit_share(

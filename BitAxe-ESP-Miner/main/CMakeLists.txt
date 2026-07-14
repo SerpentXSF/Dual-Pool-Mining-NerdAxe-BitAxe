@@ -30,6 +30,7 @@ SRCS
     "./http_server/axe-os/api/system/asic_settings.c"
     "./self_test/self_test.c"
     "./tasks/stratum_v1_task.c"
+    "./tasks/stratum_poolb_task.c"
     "./tasks/stratum_v2_task.c"
     "./tasks/protocol_coordinator.c"
     "./tasks/create_jobs_task.c"
@@ -85,6 +86,7 @@ PRIV_REQUIRES
     "esp_driver_i2c"
     "tcp_transport"
     "stratum_v2"
+    "dual_pool"
     "esp_mm"
 
 EMBED_FILES "http_server/recovery_page.html"
