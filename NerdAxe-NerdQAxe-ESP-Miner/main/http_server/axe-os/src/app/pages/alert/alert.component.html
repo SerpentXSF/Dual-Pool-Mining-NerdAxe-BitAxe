@@ -1,0 +1,82 @@
+<ng-template #loading>
+  <h4>{{ 'COMMON.LOADING' | translate }}</h4>
+</ng-template>
+
+<ng-container *ngIf="form != null; else loading">
+
+  <form [formGroup]="form">
+    <nb-card>
+      <nb-card-header>{{ 'DISCORD.TITLE' | translate }}</nb-card-header>
+
+      <nb-card-body>
+        <div class="form-row mb-2">
+          {{ 'DISCORD.CONFIGURE_DESCRIPTION' | translate }}
+        </div>
+
+        <!-- Checkboxes with inline descriptions -->
+        <div class="form-row">
+          <nb-checkbox formControlName="watchdogEnable" class="cb-line">
+            <span class="cb-title">{{ 'DISCORD.MINER_WATCHDOG' | translate }}</span>
+            <span class="cb-desc">— {{ 'DISCORD.MINER_WATCHDOG_DESC' | translate }}</span>
+          </nb-checkbox>
+        </div>
+
+        <div class="form-row">
+          <nb-checkbox formControlName="blockFoundEnable" class="cb-line">
+            <span class="cb-title">{{ 'DISCORD.BLOCK_FOUND' | translate }}</span>
+            <span class="cb-desc">— {{ 'DISCORD.BLOCK_FOUND_DESC' | translate }}</span>
+          </nb-checkbox>
+        </div>
+
+        <div class="form-row">
+          <nb-checkbox formControlName="bestDiffEnable" class="cb-line">
+            <span class="cb-title">{{ 'DISCORD.BEST_DIFF_FOUND' | translate }}</span>
+            <span class="cb-desc">— {{ 'DISCORD.BEST_DIFF_FOUND_DESC' | translate }}</span>
+          </nb-checkbox>
+        </div>
+
+        <div class="form-row">
+          <nb-checkbox formControlName="coinbaseVerifyEnable" class="cb-line">
+            <span class="cb-title">{{ 'DISCORD.COINBASE_VERIFY_FAILED' | translate }}</span>
+            <span class="cb-desc">— {{ 'DISCORD.COINBASE_VERIFY_FAILED_DESC' | translate }}</span>
+          </nb-checkbox>
+        </div>
+        <!-- Webhook -->
+        <div class="form-row webhook-row mt-3">
+          <div class="form-control-wrapper webhook-control">
+            <label for="webhookUrl" class="form-label webhook-label">{{ 'DISCORD.WEBHOOK_URL' | translate }}:</label>
+            <input
+              nbInput
+              id="webhookUrl"
+              type="password"
+              formControlName="webhookUrl"
+              placeholder="https://example.com/webhook/alerts"
+            />
+            <small>{{ 'DISCORD.WEBHOOK_HELP' | translate }}</small>
+          </div>
+        </div>
+        <div class="d-flex align-items-center mt-3" style="gap: 8px;">
+          <button nbButton size="small" (click)="saveAlerts()" status="primary">{{ 'COMMON.SAVE' | translate }}</button>
+          <button nbButton size="small" (click)="sendTest()" status="info" [disabled]="!hasWebhook">{{ 'DISCORD.TEST' | translate }}</button>
+        </div>
+
+        <hr class="my-4" />
+
+        <div class="form-row mb-2">
+          <strong>{{ 'DISPLAY.TITLE' | translate }}</strong>
+        </div>
+
+        <div class="form-row">
+          <nb-checkbox formControlName="showBlockFoundScreen" class="cb-line">
+            <span class="cb-title">{{ 'DISPLAY.BLOCK_FOUND_SCREEN' | translate }}</span>
+            <span class="cb-desc">— {{ 'DISPLAY.BLOCK_FOUND_SCREEN_DESC' | translate }}</span>
+          </nb-checkbox>
+        </div>
+
+        <div class="d-flex align-items-center mt-3">
+          <button nbButton size="small" (click)="saveDisplay()" status="primary">{{ 'COMMON.SAVE' | translate }}</button>
+        </div>
+      </nb-card-body>
+    </nb-card>
+  </form>
+</ng-container>

@@ -26,14 +26,17 @@ the BitAxe / NerdAxe / NerdQAxe device families.
 
 | Device type | Folder                     | Base firmware                         | Status |
 |-------------|----------------------------|---------------------------------------|--------|
-| **BitAxe**  | `BitAxe-ESP-Miner/`        | ESP-Miner (bitaxeorg mainline, C)     | ✅ implemented |
-| **NerdAxe** | `NerdAxe-NerdQAxe-ESP-Miner/` (planned) | ESP-Miner-NerdQAxePlus fork, board `nerdaxe` | ⏳ planned |
-| **NerdQAxe**| `NerdAxe-NerdQAxe-ESP-Miner/` (planned) | ESP-Miner-NerdQAxePlus fork, board `nerdqaxeplus` | ⏳ planned |
+| **BitAxe**  | `BitAxe-ESP-Miner/`        | ESP-Miner (bitaxeorg mainline, C)     | ✅ implemented (new code) |
+| **NerdAxe** | `NerdAxe-NerdQAxe-ESP-Miner/` | ESP-Miner-NerdQAxePlus fork, `BOARD=NERDAXE` | ✅ native (already upstream) |
+| **NerdQAxe**| `NerdAxe-NerdQAxe-ESP-Miner/` | ESP-Miner-NerdQAxePlus fork, `BOARD=NERDQAXEPLUS` | ✅ native (already upstream) |
 | (CPU miner) | `NerdMiner_v2/` (planned)  | BitMaker-hub NerdMiner_v2 (Arduino)   | ⏳ planned |
 
-The NerdAxe and NerdQAxe builds both come from the shufps NerdQAxe fork (it has
-dedicated board files for both). NerdMiner_v2 is the CPU "lottery" miner and is the
-only target where hashing is literally split across CPU threads.
+The NerdAxe and NerdQAxe builds both come from the shufps NerdQAxe fork, which
+**already implements dual-pool mining (Pool Mode = Dual + Pool Balance slider) and
+per-pool custom passwords natively** — no code changes were required. See
+[NerdAxe-NerdQAxe-ESP-Miner/DUAL_MINING_NOTES.md](NerdAxe-NerdQAxe-ESP-Miner/DUAL_MINING_NOTES.md).
+NerdMiner_v2 is the CPU "lottery" miner and is the only target where hashing is
+literally split across CPU threads.
 
 ## How dual mining works (BitAxe implementation)
 

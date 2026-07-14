@@ -1,0 +1,222 @@
+#include <errno.h>
+#include <string.h>
+
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+
+#include "esp_log.h"
+#include "esp_crt_bundle.h"
+#include "esp_transport.h"
+#include "esp_transport_tcp.h"
+#include "esp_transport_ssl.h"
+
+#include "macros.h"
+#include "nvs_config.h"
+#include "stratum_transport.h"
+
+// esp_transport_get_socket() exists in IDF 5.3 but is only declared in
+// the private header (esp_transport_internal.h).  A forward declaration
+// avoids pulling in the entire private API surface.
+extern "C" int esp_transport_get_socket(esp_transport_handle_t t);
+
+static const char* TAG = "stratum_transport";
+
+StratumTransport::StratumTransport(bool use_tls)
+    : m_use_tls(use_tls), m_t(nullptr)
+{
+    pthread_mutexattr_t attr;
+    pthread_mutexattr_init(&attr);
+    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutex_init(&m_lock, &attr);
+    pthread_mutexattr_destroy(&attr);
+}
+
+StratumTransport::~StratumTransport()
+{
+    close();
+}
+
+bool StratumTransport::connect(const char* host, const char* ip, uint16_t port)
+{
+    // hold the lock across the whole connect so a racing submitShare can't
+    // touch a half-initialized transport (esp. mid-TLS-handshake)
+    PThreadGuard g(m_lock);
+
+    close();
+
+    esp_transport_handle_t t = nullptr;
+
+    if (m_use_tls) {
+        t = esp_transport_ssl_init();
+        if (!t) {
+            ESP_LOGE(TAG, "esp_transport_ssl_init failed");
+            return false;
+        }
+
+        esp_transport_ssl_crt_bundle_attach(t, esp_crt_bundle_attach);
+        esp_transport_ssl_set_common_name(t, host);
+    } else {
+        t = esp_transport_tcp_init();
+        if (!t) {
+            ESP_LOGE(TAG, "esp_transport_tcp_init failed");
+            return false;
+        }
+    }
+
+    m_t = t;
+    applyKeepAlive_();
+
+    const char* connect_host = (m_use_tls ? host : (ip ? ip : host));
+
+    ESP_LOGI(TAG, "Connecting (%s) to %s:%u",
+             m_use_tls ? "TLS" : "TCP", connect_host, (unsigned)port);
+
+    if (esp_transport_connect(m_t, connect_host, (int)port, 5000) != 0) {
+        int terr = esp_transport_get_errno(m_t);
+        ESP_LOGE(TAG, "esp_transport_connect failed, errno=%d (%s)", terr, strerror(terr));
+        close();
+        return false;
+    }
+
+    setNoDelay_();
+
+    ESP_LOGI(TAG, "Connected");
+    return true;
+}
+
+void StratumTransport::setNoDelay_()
+{
+    // Disable Nagle's algorithm on the pool socket.
+    // Share submits are latency-sensitive, and the SV2 noise transport writes
+    // the encrypted header and payload as separate TCP segments. With Nagle
+    // enabled, the second segment is held back until the first is ACKed by the
+    // pool, which adds a full delayed-ACK delay (~40ms) to every share submit.
+    // SV1 writes in a single segment but also benefits from immediate sends.
+    int sock = esp_transport_get_socket(m_t);
+    if (sock < 0) {
+        ESP_LOGW(TAG, "Could not get socket fd to set TCP_NODELAY");
+        return;
+    }
+
+    int nodelay = 1;
+    if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay)) < 0) {
+        ESP_LOGW(TAG, "Failed to set TCP_NODELAY (errno=%d: %s)", errno, strerror(errno));
+    } else {
+        ESP_LOGI(TAG, "TCP_NODELAY enabled");
+    }
+}
+
+int StratumTransport::send(const void* data, size_t len)
+{
+    PThreadGuard g(m_lock);
+
+    if (!m_t) {
+        errno = ENOTCONN;
+        return -1;
+    }
+
+    int ret = esp_transport_write(m_t, (const char*)data, (int)len, 30000);
+    if (ret < 0) {
+        int terr = esp_transport_get_errno(m_t);
+        errno = (terr > 0) ? terr : ECONNRESET;
+        ESP_LOGW(TAG, "write failed ret=%d errno=%d (%s)", ret, errno, strerror(errno));
+        return -1;
+    }
+
+    // Optional: treat "0 bytes written" as timeout-ish if len>0
+    if (ret == 0 && len > 0) {
+        errno = EAGAIN;
+        return -1;
+    }
+
+    return ret;
+}
+
+int StratumTransport::recv(void* buf, size_t len)
+{
+    if (!m_t) {
+        errno = ENOTCONN;
+        return -1;
+    }
+
+    int ret = esp_transport_read(m_t, (char*)buf, (int)len, 30000);
+
+    if (ret > 0) {
+        return ret;
+    }
+
+    // esp_tcp_transport_err_t: timeout == 0 :contentReference[oaicite:4]{index=4}
+    if (ret == ERR_TCP_TRANSPORT_CONNECTION_TIMEOUT) {
+        errno = EAGAIN;
+        return -1;
+    }
+
+    // esp_tcp_transport_err_t: FIN == -1 :contentReference[oaicite:5]{index=5}
+    if (ret == ERR_TCP_TRANSPORT_CONNECTION_CLOSED_BY_FIN) {
+        return 0; // peer closed
+    }
+
+    // other negatives: transport/tls error (can be mbedTLS codes etc.)
+    int terr = esp_transport_get_errno(m_t); // get+clear :contentReference[oaicite:6]{index=6}
+    errno = (terr > 0) ? terr : ECONNRESET;
+    ESP_LOGW(TAG, "read failed ret=%d errno=%d (%s)", ret, errno, strerror(errno));
+    return -1;
+}
+
+bool StratumTransport::isConnected()
+{
+    PThreadGuard g(m_lock);
+
+    if (!m_t) {
+        return false;
+    }
+
+    int r = esp_transport_poll_write(m_t, 0);
+    return (r >= 0);
+}
+
+void StratumTransport::shutdownSocket_()
+{
+    // only the owner task mutates m_t, so reading it here without the lock
+    // is safe; shutdown() frees nothing but makes a writer blocked inside
+    // esp_transport_write() fail out and release m_lock
+    if (!m_t) {
+        return;
+    }
+    int sock = esp_transport_get_socket(m_t);
+    if (sock >= 0) {
+        shutdown(sock, SHUT_RDWR);
+    }
+}
+
+void StratumTransport::close()
+{
+    shutdownSocket_();
+
+    PThreadGuard g(m_lock);
+    if (m_t) {
+        esp_transport_close(m_t);
+        esp_transport_destroy(m_t);
+        m_t = nullptr;
+    }
+}
+
+void StratumTransport::applyKeepAlive_()
+{
+    m_keepAlive = {};
+    m_keepAlive.keep_alive_enable = Config::isStratumKeepaliveEnabled();
+    m_keepAlive.keep_alive_idle = 10;
+    m_keepAlive.keep_alive_interval = 5;
+    m_keepAlive.keep_alive_count = 3;
+
+    if (!m_keepAlive.keep_alive_enable) {
+        return;
+    }
+
+    if (m_use_tls) {
+        esp_transport_ssl_set_keep_alive(m_t, &m_keepAlive);
+    } else {
+        esp_transport_tcp_set_keep_alive(m_t, &m_keepAlive);
+    }
+}
