@@ -34,10 +34,35 @@ esp-miner-ota.bin      890dac9ffe8e718ec4da2037206934a8c3c28651ab0d45c5a6a7b0a75
 
 Then configure dual mining in the web UI (see `../FLASHING_AND_VERIFICATION.md`).
 
-## NerdAxe / NerdQAxe / NerdMiner_v2 — use official prebuilt bins
+## NerdAxe & NerdQAxe — prebuilt here too ✅
 
-These are unmodified (dual-pool + password already native), so download the official
-release images instead of building:
-- NerdAxe / NerdQAxe: https://github.com/shufps/ESP-Miner-NerdQAxePlus/releases
-  (pick the factory bin for `nerdaxe` / `nerdqaxeplus` / `nerdqaxeplus2`).
-- NerdMiner_v2: https://github.com/BitMaker-hub/NerdMiner_v2/releases (pick your board).
+Built from `NerdAxe-NerdQAxe-ESP-Miner/` (unmodified fork; dual-pool + password are
+native). Flash the factory bin at offset **`0x0`**.
+
+| File | Device | Flash offset | Size |
+|------|--------|--------------|------|
+| `NerdAxe/esp-miner-factory-nerdaxe.bin` | NerdAxe | `0x0` | 15.8 MB |
+| `NerdAxe/esp-miner-ota-nerdaxe.bin` | NerdAxe (web OTA) | via UI | 1.7 MB |
+| `NerdQAxe/esp-miner-factory-nerdqaxeplus.bin` | NerdQAxe+ | `0x0` | 15.8 MB |
+| `NerdQAxe/esp-miner-ota-nerdqaxeplus.bin` | NerdQAxe+ (web OTA) | via UI | 1.7 MB |
+
+**SHA-256 (factory)**
+```
+esp-miner-factory-nerdaxe.bin        a53bb91411e7bddf98f54919816fc304101d0227ee8d69593be2935175f0f5a0
+esp-miner-factory-nerdqaxeplus.bin   e80fd8260d2985e17fbdd8e71ac39fa6332c824ed4e9700ccc2bba731ea64cdd
+```
+
+**Build provenance:** `shufps/esp-idf-builder:0.0.1` (ESP-IDF v5.3.3 + Node 20),
+`BOARD=NERDAXE` / `BOARD=NERDQAXEPLUS`, secp256k1 submodule @ `0cdc758`. Each build
+compiled the firmware **and** its Angular web UI. After flashing, enable dual mining
+in the UI (**Pool Mode = Dual** + **Pool Balance** slider) — see
+`../NerdAxe-NerdQAxe-ESP-Miner/DUAL_MINING_NOTES.md`.
+
+> Need another board variant (NERDQAXEPLUS2, NERDOCTAXE, gamma, etc.)? The official
+> releases cover them: https://github.com/shufps/ESP-Miner-NerdQAxePlus/releases
+> — or ask and I'll build that `BOARD=` from source.
+
+## NerdMiner_v2 — official prebuilt bins
+
+Unmodified (password native, dual-pool out of scope). Use the official release for
+your board: https://github.com/BitMaker-hub/NerdMiner_v2/releases
