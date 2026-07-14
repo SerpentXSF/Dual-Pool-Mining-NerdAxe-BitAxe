@@ -45,14 +45,20 @@ file swap.
      `libsecp256k1` submodule first — its files are vendored here, see commit `d1007b3`).
    - One commit per sync: `sync bitaxe to upstream vX.Y.Z + dual-pool`.
 
-## Three changes that cut future merge pain (recommended, not yet applied)
+## Merge-pain reducers
 
-1. **Move the reentrant receive** (`STRATUM_V1_receive_jsonrpc_line_ctx`) out of
-   `components/stratum/stratum_api.c` into the `dual_pool` component. `stratum_api.c`
-   changes almost every upstream release; this removes it from the conflict surface.
-2. **Sentinel-mark every upstream-file edit** with `// DUAL-POOL BEGIN` / `// DUAL-POOL END`
-   (HTML comments in Angular). Then `grep -rn "DUAL-POOL"` is a complete, self-verifying
-   integration-point inventory after a rebase.
+**Applied (BitAxe):**
+1. ✅ **Reentrant receive moved** out of `components/stratum/stratum_api.c` into
+   `components/dual_pool/stratum_recv_ctx.c` (the component now `REQUIRES tcp_transport`).
+   `stratum_api.c` changes almost every upstream release; it's off the conflict surface now.
+2. ✅ **Sentinels** — key integration points carry `// DUAL-POOL BEGIN` / `// DUAL-POOL END`
+   (`stratum_api.c`, `create_jobs_task.c`, `global_state.h`, `asic_result_task.c`).
+   `grep -rn "DUAL-POOL" BitAxe-ESP-Miner` is your rebase inventory. (Remaining touched
+   files — `system.c`, `main.c`, `nvs_config.*`, `system_api_json.c`, `Kconfig.projbuild`,
+   `CMakeLists.txt`, the Angular UI — are additive and listed above; mark them too as you
+   revisit each.)
+
+**Still recommended:**
 3. **Isolate the UI delta** into dedicated Angular child components, so upstream
    `pool.component.html` / `home.component.html` carry only a one-line `<app-dual-pool-*>`.
 4. **Version string:** ship `<upstream-version>-dualpool` (so users know the base) rather
