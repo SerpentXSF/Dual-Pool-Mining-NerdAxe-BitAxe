@@ -26,7 +26,7 @@ the BitAxe / NerdAxe / NerdQAxe device families.
 
 | Device type | Folder                     | Base firmware                         | Status |
 |-------------|----------------------------|---------------------------------------|--------|
-| **BitAxe**  | `BitAxe-ESP-Miner/`        | ESP-Miner (bitaxeorg mainline, C)     | ✅ implemented (new code) |
+| **BitAxe**  | `BitAxe-ESP-Miner/`        | ESP-Miner (bitaxeorg mainline, C)     | ✅ implemented + **prebuilt bin** in [Firmware-Binaries/](Firmware-Binaries/) |
 | **NerdAxe** | `NerdAxe-NerdQAxe-ESP-Miner/` | ESP-Miner-NerdQAxePlus fork, `BOARD=NERDAXE` | ✅ native (already upstream) |
 | **NerdQAxe**| `NerdAxe-NerdQAxe-ESP-Miner/` | ESP-Miner-NerdQAxePlus fork, `BOARD=NERDQAXEPLUS` | ✅ native (already upstream) |
 | (CPU miner) | `NerdMiner_v2/`            | BitMaker-hub NerdMiner_v2 (Arduino)   | ✅ password native; dual-pool out of scope (lottery miner) |
