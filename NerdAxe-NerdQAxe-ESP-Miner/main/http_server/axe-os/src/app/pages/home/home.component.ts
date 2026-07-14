@@ -726,6 +726,8 @@ export class HomeComponent implements AfterViewChecked, OnInit, OnDestroy {
         this._info = info;
         // Per-pool hashrate mini-charts (dual mode). Guarded so it can never break polling.
         try { this.samplePoolHashrate(); } catch {}
+        // Dashboard gauge cards (Power / Heat / Performance). Guarded.
+        try { this.updateGauges(); } catch {}
         try {
           const flagKey = '__nerdCharts_clearChartHistoryOnce';
           if (this.localStorageGet(flagKey) === '1') {
@@ -1937,6 +1939,50 @@ private setAxisPadding(cfg: any, persist: boolean = false): void {
     for (let i = 0; i < 2; i++) {
       if (this.poolCharts[i]) { try { this.poolCharts[i]!.destroy(); } catch {} this.poolCharts[i] = null; }
     }
+  }
+
+  // ---- Dashboard gauge cards (lightweight SVG donut gauges; no library) ----
+  private static readonly GAUGE_CIRC = 2 * Math.PI * 42; // r=42 in the 100x100 viewBox
+  public gaugeCards: { title: string; gauges: { label: string; valueText: string; unit: string; color: string; offset: number }[] }[] = [];
+
+  private gauge(label: string, value: number, max: number, unit: string, dec: number, color: string) {
+    const v = Number.isFinite(value) ? value : 0;
+    const frac = max > 0 ? Math.max(0, Math.min(1, v / max)) : 0;
+    return { label, valueText: v.toFixed(dec), unit, color, offset: HomeComponent.GAUGE_CIRC * (1 - frac) };
+  }
+
+  private gaugeTempColor(t: number): string {
+    if (t >= 70) return '#f87171';
+    if (t >= 60) return '#fbbf24';
+    return '#34d399';
+  }
+
+  private updateGauges(): void {
+    const info: any = this._info;
+    if (!info) { this.gaugeCards = []; return; }
+    const perf = info.performance || {}, pwr = info.power || {}, th = info.thermal || {};
+    const fan = (th.fans && th.fans[0]) || {};
+    const freqMax = Number(this.asicFreqMax(info)) || 700;
+    const hr = Number(perf.hashRate) || 0;
+    const temp = Number(th.asicTemp) || 0;
+    const eff = (Number(pwr.watts) > 0 && hr > 0) ? Number(pwr.watts) / (hr / 1000) : 0;
+    this.gaugeCards = [
+      { title: 'Power', gauges: [
+        this.gauge('Power', Number(pwr.watts) || 0, 30, 'W', 1, '#a78bfa'),
+        this.gauge('Input', Number(pwr.voltage) || 0, 15, 'V', 2, '#60a5fa'),
+        this.gauge('Current', Number(pwr.currentA) || 0, 5, 'A', 2, '#60a5fa'),
+      ]},
+      { title: 'Heat', gauges: [
+        this.gauge('ASIC Temp', temp, 85, '°C', 0, this.gaugeTempColor(temp)),
+        this.gauge('Fan', Number(fan.speed) || 0, 100, '%', 0, '#2dd4bf'),
+        this.gauge('Fan RPM', Number(fan.rpm) || 0, 8000, 'RPM', 0, '#2dd4bf'),
+      ]},
+      { title: 'Performance', gauges: [
+        this.gauge('Frequency', Number(perf.frequency) || 0, freqMax, 'MHz', 0, '#a78bfa'),
+        this.gauge('Hashrate', hr, Math.max(hr * 1.25, 100), 'GH/s', 0, '#a78bfa'),
+        this.gauge('Efficiency', eff, 50, 'J/Th', 2, '#34d399'),
+      ]},
+    ];
   }
 
 

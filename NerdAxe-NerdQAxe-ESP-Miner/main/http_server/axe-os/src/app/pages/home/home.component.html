@@ -135,6 +135,36 @@
         </div>
       </div>
 
+      <!-- Dashboard gauges: Power / Heat / Performance (modern SVG donut gauges) -->
+      <div class="row mt-3 gauge-row" *ngIf="gaugeCards.length">
+        <div class="col-12 col-md-4" *ngFor="let card of gaugeCards">
+          <nb-card class="nerd-chart-card gauge-card h-100">
+            <nb-card-header class="nerd-chart-header">
+              <span class="text-hint">{{ card.title }}</span>
+            </nb-card-header>
+            <nb-card-body>
+              <div class="gauge-grid">
+                <div class="gauge" *ngFor="let g of card.gauges">
+                  <div class="gauge-dial">
+                    <svg viewBox="0 0 100 100" class="gauge-svg" aria-hidden="true">
+                      <circle class="gauge-track" cx="50" cy="50" r="42"></circle>
+                      <circle class="gauge-arc" cx="50" cy="50" r="42"
+                        [style.stroke]="g.color" [style.stroke-dasharray]="263.894"
+                        [style.stroke-dashoffset]="g.offset"></circle>
+                    </svg>
+                    <div class="gauge-center">
+                      <div class="gauge-value">{{ g.valueText }}</div>
+                      <div class="gauge-unit">{{ g.unit }}</div>
+                    </div>
+                  </div>
+                  <div class="gauge-label">{{ g.label }}</div>
+                </div>
+              </div>
+            </nb-card-body>
+          </nb-card>
+        </div>
+      </div>
+
       <!-- Hashrate summary + Pools (side-by-side) -->
       <div class="row mt-3 d-flex align-items-stretch">
         <div class="col-12 col-xl-6">
