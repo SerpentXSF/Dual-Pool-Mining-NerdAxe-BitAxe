@@ -167,6 +167,7 @@ void app_main(void)
     }
 
     queue_init(&GLOBAL_STATE.stratum_queue);
+    queue_init(&GLOBAL_STATE.stratum_queueB); // dual mining: Pool B work queue
 
     if (system_init_ret == ESP_OK) {
         if (asic_initialize(&GLOBAL_STATE, ASIC_INIT_COLD_BOOT, 0) == 0) {

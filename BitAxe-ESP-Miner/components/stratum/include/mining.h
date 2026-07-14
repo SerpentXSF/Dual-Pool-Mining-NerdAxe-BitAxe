@@ -21,6 +21,7 @@ typedef struct
     double pool_diff;
     char *jobid;
     char *extranonce2;
+    uint8_t pool_id; // 0 = Pool A, 1 = Pool B (dual mining)
 } bm_job;
 
 void free_bm_job(bm_job *job);

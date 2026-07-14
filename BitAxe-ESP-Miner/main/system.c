@@ -83,6 +83,24 @@ void SYSTEM_init_system(GlobalState * GLOBAL_STATE)
     module->pool_pass = nvs_config_get_string(NVS_CONFIG_STRATUM_PASS);
     module->fallback_pool_pass = nvs_config_get_string(NVS_CONFIG_FALLBACK_STRATUM_PASS);
 
+    // ---- Dual mining: Pool B endpoint + dedicated failover ----
+    module->poolB_url  = nvs_config_get_string(NVS_CONFIG_POOLB_URL);
+    module->poolB_port = nvs_config_get_u16(NVS_CONFIG_POOLB_PORT);
+    module->poolB_user = nvs_config_get_string(NVS_CONFIG_POOLB_USER);
+    module->poolB_pass = nvs_config_get_string(NVS_CONFIG_POOLB_PASS);
+    module->poolB_tls  = nvs_config_get_u16(NVS_CONFIG_POOLB_TLS);
+    module->poolB_fb_url  = nvs_config_get_string(NVS_CONFIG_POOLB_FB_URL);
+    module->poolB_fb_port = nvs_config_get_u16(NVS_CONFIG_POOLB_FB_PORT);
+    module->poolB_fb_user = nvs_config_get_string(NVS_CONFIG_POOLB_FB_USER);
+    module->poolB_fb_pass = nvs_config_get_string(NVS_CONFIG_POOLB_FB_PASS);
+    module->poolB_fb_tls  = nvs_config_get_u16(NVS_CONFIG_POOLB_FB_TLS);
+    module->poolB_is_using_failover = false;
+    module->poolA_shares_accepted = 0;
+    module->poolA_shares_rejected = 0;
+    module->poolB_shares_accepted = 0;
+    module->poolB_shares_rejected = 0;
+    module->poolB_connection_info[0] = '\0';
+
     // set the pool difficulty
     module->pool_difficulty = nvs_config_get_u16(NVS_CONFIG_STRATUM_DIFFICULTY);
     module->fallback_pool_difficulty = nvs_config_get_u16(NVS_CONFIG_FALLBACK_STRATUM_DIFFICULTY);
@@ -144,6 +162,18 @@ void SYSTEM_init_system(GlobalState * GLOBAL_STATE)
     // Initialize mutexes
     pthread_mutex_init(&GLOBAL_STATE->valid_jobs_lock, NULL);
     GLOBAL_STATE->stratum_mux = (portMUX_TYPE)portMUX_INITIALIZER_UNLOCKED;
+
+    // ---- Dual mining: controls + Pool B runtime state ----
+    GLOBAL_STATE->dual_enable      = nvs_config_get_bool(NVS_CONFIG_DUAL_ENABLE);
+    GLOBAL_STATE->dual_interval_ms = nvs_config_get_u16(NVS_CONFIG_DUAL_INTERVAL_MS);
+    GLOBAL_STATE->dual_ratio_a     = (uint8_t) nvs_config_get_u16(NVS_CONFIG_DUAL_RATIO_A);
+    GLOBAL_STATE->stratum_muxB     = (portMUX_TYPE)portMUX_INITIALIZER_UNLOCKED;
+    GLOBAL_STATE->transportB       = NULL;
+    GLOBAL_STATE->extranonce_strB  = NULL;
+    GLOBAL_STATE->extranonce_2_lenB = 0;
+    GLOBAL_STATE->pool_difficultyB = 0;
+    GLOBAL_STATE->version_maskB    = 0;
+    GLOBAL_STATE->send_uidB        = 1;
 }
 
 void SYSTEM_init_versions(GlobalState * GLOBAL_STATE) {

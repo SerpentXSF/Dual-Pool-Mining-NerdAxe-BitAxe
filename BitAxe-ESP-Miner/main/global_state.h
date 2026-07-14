@@ -98,6 +98,24 @@ typedef struct
     bool is_using_fallback;
     uint16_t fallback_pool_protocol;
     char pool_connection_info[64];
+
+    // ---- Dual mining: Pool B endpoint + dedicated failover + per-pool counters ----
+    char * poolB_url;
+    uint16_t poolB_port;
+    char * poolB_user;
+    char * poolB_pass;
+    uint16_t poolB_tls;
+    char * poolB_fb_url;
+    uint16_t poolB_fb_port;
+    char * poolB_fb_user;
+    char * poolB_fb_pass;
+    uint16_t poolB_fb_tls;
+    bool poolB_is_using_failover;
+    uint64_t poolA_shares_accepted;
+    uint64_t poolA_shares_rejected;
+    uint64_t poolB_shares_accepted;
+    uint64_t poolB_shares_rejected;
+    char poolB_connection_info[64];
     bool overheat_mode;
     bool mining_paused;
     bool pools_unavailable;
@@ -174,10 +192,24 @@ typedef struct
 
     esp_transport_handle_t transport;
     portMUX_TYPE stratum_mux;
-    
+
     // A message ID that must be unique per request that expects a response.
     // For requests not expecting a response (called notifications), this is null.
     int send_uid;
+
+    // ---- Dual mining: Pool B parallel state (plain data; no dual_pool type here
+    // so global_state.h stays include-light for the asic/connect components) ----
+    esp_transport_handle_t transportB;
+    work_queue stratum_queueB;
+    char * extranonce_strB;
+    int extranonce_2_lenB;
+    double pool_difficultyB;
+    uint32_t version_maskB;
+    int send_uidB;
+    portMUX_TYPE stratum_muxB;
+    bool dual_enable;
+    uint16_t dual_interval_ms;
+    uint8_t  dual_ratio_a;
 
     stratum_protocol_t stratum_protocol;
     struct sv2_conn *sv2_conn;
