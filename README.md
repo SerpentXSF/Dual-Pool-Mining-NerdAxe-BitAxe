@@ -166,6 +166,17 @@ Validates scheduler ratio accuracy, clamps, and the failover state machine.
 - Both pools should negotiate the standard version mask (`0x1fffe000`); nearly all do. If
   two pools disagree, the firmware logs a one-time warning and Pool B may reject the
   occasional share whose version bits fall outside its mask.
+- **Pool problem vs. local problem (how to tell):** a genuinely bad pool shows up as
+  climbing **rejected shares** (per-pool via `poolAShares*` / `poolBShares*` in
+  `GET /api/system`). If instead **rejects stay flat while the error rate rises**, the loss
+  is **local, at the switch boundary**: right after a switch (or a `clean_jobs`) the ASIC is
+  still returning nonces computed against the *previous* pool's template — validated against
+  the new template they fail and would be thrown away, even though they're valid shares for
+  the pool that issued them. The firmware's **dropped-share recovery** (see *How dual mining
+  works*) catches these: a failing nonce is re-tested against every live template and
+  submitted to the pool it actually matches, instead of being discarded. (Because the
+  *dashboard* error % is the ASIC hardware counter — previous bullet — these boundary
+  discards surface mainly as **fewer accepted shares**, not as that percentage.)
 
 ## Notes & limitations
 
