@@ -9,12 +9,14 @@ built from this deliverable's `BitAxe-ESP-Miner/` source. Flash it at offset **`
 | File | Use | Flash offset | Size |
 |------|-----|--------------|------|
 | `BitAxe/esp-miner-factory.bin` | Fresh flash / recovery (full image) | `0x0` | 15.8 MB |
-| `BitAxe/esp-miner-ota.bin` | App-only (for the device's web **OTA update**) | n/a (upload via UI) | 1.7 MB |
+| `BitAxe/esp-miner.bin` | App-only — device web **OTA** (Firmware) | n/a (upload via UI) | 1.7 MB |
+| `BitAxe/www.bin` | Web UI — device web **OTA** (Web UI) | n/a (upload via UI) | 3.0 MB |
 
 **SHA-256**
 ```
-esp-miner-factory.bin  9f3c41ecb90807eb7c357cee4d1b12c4e280091d40328d9915d97c9bd304919f
-esp-miner-ota.bin      890dac9ffe8e718ec4da2037206934a8c3c28651ab0d45c5a6a7b0a752d7240a
+esp-miner-factory.bin  1890eefa5b3aabb409236a4c02917ec0667259421c2854e3687355c77dfc54ed
+esp-miner.bin          a3bcbf7b98391403c267c45e306173c6c90c7a3335d9a00fed0cbecc77ce033f
+www.bin                271818395a005321746bd36c28d35916e569246f804a6acd567212a7e591edf3
 ```
 
 **Build provenance**
@@ -23,9 +25,11 @@ esp-miner-ota.bin      890dac9ffe8e718ec4da2037206934a8c3c28651ab0d45c5a6a7b0a75
   production build.
 - Submodule: `components/libsecp256k1/libsecp256k1` = bitcoin-core/secp256k1 @
   `0cdc758a56360bf58a851fe91085a327ec97685a` (upstream-pinned commit).
-- App size 0x1a0310 (~1.7 MB), 59% of the app partition free.
-- This build **verifies the full firmware compiles** (all dual-pool C code + the
-  Angular Dual Mining UI). It has not been run on physical hardware here.
+- App size 0x1a03a0 (~1.7 MB), 59% of the app partition free.
+- Includes the maintenance/error-rate hardening: **live-tunable Split Interval / ratio /
+  dual-enable** (no reboot) and **Pool B version-mask coherence**. Earlier dual-pool builds
+  were verified mining to both pools on real hardware (781 / 521 Gh/s split); these two
+  incremental changes compile cleanly but have not yet been re-run on physical hardware.
 
 ### Flash it
 - **Web flasher** (easiest): `cd ../Flasher && python serve.py` → preset

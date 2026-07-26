@@ -17,6 +17,7 @@
 #include "stratum_v2_task.h"
 #include "utils.h"
 #include "pool_scheduler.h"
+#include "nvs_config.h"
 
 static const char *TAG = "create_jobs_task";
 
@@ -69,12 +70,32 @@ void create_jobs_task(void *pvParameters)
     bool vmask_warned = false;
     void *current_work_B = NULL;
     uint64_t extranonce_2_B = 0;
+    uint64_t dual_cfg_last_us = 0; // throttle for live dual-settings re-read
     // DUAL-POOL END
 
     ESP_LOGI(TAG, "ASIC Job Interval: %d ms", timeout_ms);
     ESP_LOGI(TAG, "ASIC Ready!");
 
     while (1) {
+        // DUAL-POOL BEGIN: hot-reload dual settings so a Split Interval / ratio / enable
+        // change from the web UI takes effect WITHOUT a reboot. Re-read at most ~1/sec.
+        // Previously these latched at boot (scheduler init), forcing a per-miner restart.
+        uint64_t cfg_now_us = esp_timer_get_time();
+        if (cfg_now_us - dual_cfg_last_us > 1000000) {
+            dual_cfg_last_us = cfg_now_us;
+            GLOBAL_STATE->dual_enable = nvs_config_get_bool(NVS_CONFIG_DUAL_ENABLE);
+            uint16_t ivl = nvs_config_get_u16(NVS_CONFIG_DUAL_INTERVAL_MS);
+            uint8_t  rat = (uint8_t) nvs_config_get_u16(NVS_CONFIG_DUAL_RATIO_A);
+            if (ivl != GLOBAL_STATE->dual_interval_ms || rat != GLOBAL_STATE->dual_ratio_a) {
+                GLOBAL_STATE->dual_interval_ms = ivl;
+                GLOBAL_STATE->dual_ratio_a = rat;
+                sched_inited = false; // re-init scheduler with the new interval/ratio
+                ESP_LOGI(TAG, "Dual settings updated live: interval=%u ms, Pool A share=%u%%",
+                         (unsigned)ivl, (unsigned)rat);
+            }
+        }
+        // DUAL-POOL END
+
         // Read protocol dynamically each iteration (coordinator may have switched it)
         stratum_protocol_t active_protocol = GLOBAL_STATE->stratum_protocol;
 
@@ -249,7 +270,18 @@ static void generate_work(GlobalState *GLOBAL_STATE, mining_notify *notification
     // Select the pool-specific extranonce context and version mask.
     const char *en_str  = (pool_id == POOL_B) ? GLOBAL_STATE->extranonce_strB : GLOBAL_STATE->extranonce_str;
     int         en2_len = (pool_id == POOL_B) ? GLOBAL_STATE->extranonce_2_lenB : GLOBAL_STATE->extranonce_2_len;
-    uint32_t    vmask   = (pool_id == POOL_B) ? GLOBAL_STATE->version_maskB : GLOBAL_STATE->version_mask;
+    // The ASIC is only ever configured with Pool A's version_mask (ASIC_set_version_mask
+    // is called for Pool A only), so the chip rolls versions with THAT mask regardless of
+    // which pool a job came from. Precompute Pool B midstates with the same mask the chip
+    // actually rolls, otherwise midstate1..3 correspond to versions the chip never tries
+    // -> mismatched results at the switch boundary. Fall back to Pool B's own negotiated
+    // mask only before Pool A has negotiated one (startup). Both pools use the standard
+    // 0x1fffe000 in practice, so this is a no-op in the common case and a correctness fix
+    // only when the two pools disagree.
+    uint32_t    vmask   = (pool_id == POOL_B)
+                            ? (GLOBAL_STATE->version_mask ? GLOBAL_STATE->version_mask
+                                                          : GLOBAL_STATE->version_maskB)
+                            : GLOBAL_STATE->version_mask;
 
     if (en2_len > MAX_EXTRANONCE2_LEN) {
         ESP_LOGE(TAG, "extranonce_2_len %d exceeds maximum %d, skipping job", en2_len, MAX_EXTRANONCE2_LEN);

@@ -40,7 +40,7 @@ the BitAxe / NerdAxe / NerdQAxe device families.
 
 | Device | Where | How |
 |--------|-------|-----|
-| **BitAxe** | Web UI → **Pool** settings → **"Dual Mining (Simultaneous Pool B)"** | Enable Dual Mining, set **Split Interval** (ms) + **Pool A Share %**, fill **Pool B** host/port/user/**Pool Password** (+ optional Pool B Failover). Save → Restart. |
+| **BitAxe** | Web UI → **Pool** settings → **"Dual Mining (Simultaneous Pool B)"** | Enable Dual Mining, set **Split Interval** (ms) + **Pool A Share %**, fill **Pool B** host/port/user/**Pool Password** (+ optional Pool B Failover). **Split Interval / Pool A Share % / Enable now apply live — no reboot; Pool B endpoint & credentials still need a Restart.** |
 | **NerdAxe / NerdQAxe** | Web UI → **Settings** | Set **Pool Mode = Dual**, adjust the **Pool Balance** slider, enter each pool's **Password**. Save → Restart. (Native — per-pool hashrate split shows on the dashboard.) |
 | **NerdMiner_v2** | Wi-Fi config portal | Fill the **Pool password** field (dual-pool not applicable). |
 
@@ -106,6 +106,8 @@ via REST (`PATCH /api/system`). NVS `rest_name` keys:
 
 Pool A's failover reuses the existing **Fallback Pool** configuration.
 Passwords are never returned by the GET API (same as stock).
+`dualEnable`, `dualIntervalMs`, and `dualRatioA` are **re-read live (~1×/sec)** so tuning
+them applies without a reboot; the Pool B endpoint/credential fields load at boot (Restart).
 
 ## Building (BitAxe)
 
@@ -142,6 +144,22 @@ Validates scheduler ratio accuracy, clamps, and the failover state machine.
 4. Kill Pool B's primary endpoint → confirm Pool B fails over to its failover endpoint
    while Pool A keeps mining. Restore → confirm it returns.
 5. Set `dualEnable=false` → confirm behaviour is indistinguishable from stock.
+
+## Tuning: switch speed & error rate
+
+- **Split Interval** sets how often the ASIC switches between Pool A and Pool B. The
+  default **500 ms** is aggressive (~120 switches/min). If you see an elevated **error
+  rate** on the dashboard, **raise it** — try **3000–5000 ms**. On this firmware the
+  change takes effect **within ~1 second, with no reboot**.
+- **What the dashboard "error rate" actually is:** it's read from the **ASIC's own
+  hardware error counter** — a chip-health signal (nonces the silicon itself rejects),
+  *not* a count of dual-pool share problems. Slowing the Split Interval reduces cross-pool
+  work churn, but a **persistently high error rate on a specific unit is almost always
+  overclock / voltage / cooling** on that chip — lower its frequency or improve airflow.
+  (A healthy BitAxe typically sits around a low single-digit %.)
+- Both pools should negotiate the standard version mask (`0x1fffe000`); nearly all do. If
+  two pools disagree, the firmware logs a one-time warning and Pool B may reject the
+  occasional share whose version bits fall outside its mask.
 
 ## Notes & limitations
 

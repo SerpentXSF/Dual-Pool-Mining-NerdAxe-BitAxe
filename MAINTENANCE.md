@@ -69,18 +69,23 @@ ultimate maintenance strategy.
 
 ## Known latent issues (from review — none break steady-state mining)
 
-- **Version-mask** — Pool B computes midstates with `version_maskB`, but the ASIC rolls
-  versions with Pool A's mask (`ASIC_set_version_mask` uses Pool A only). Harmless while
-  both pools negotiate the standard `0x1fffe000` (virtually all do); a **startup warning
-  when `version_maskB != version_mask`** is the recommended guard.
+- **Version-mask** — the ASIC rolls versions with Pool A's mask (`ASIC_set_version_mask`
+  uses Pool A only). Pool B jobs are now precomputed with the **same mask the chip actually
+  rolls** (`create_jobs_task.c` `generate_work`: uses `version_mask`, falling back to
+  `version_maskB` only before Pool A negotiates), so midstates always match the chip. A
+  startup **warning fires when `version_maskB != version_mask`** — if the two pools disagree
+  (virtually never; nearly all use `0x1fffe000`), Pool B can still reject the shares whose
+  version bits fall outside its own mask, because the single chip serves both pools.
 - **Reconnect-window races** — `transportB` (submit after leaving the critical section)
   and `extranonce_strB` (freed while `create_jobs` may hold the pointer) are use-after-free
   under a reconnect coinciding with a Pool B slice. Both **mirror the same patterns
   upstream already has for Pool A**; Pool B reconnects more often so exposure is a bit
   higher. Hardening (refcount / submit-under-mutex) is a good follow-up.
-- **Cosmetic** — scheduler ratio/interval latch at boot (settings changes need a restart);
-  a stale `current_work_B` can survive ~one slice after `clean_jobs`; Pool B may count its
-  authorize reply as +1 accepted share.
+- **Live-tunable** — Split Interval / Pool A share % / dual-enable are now re-read ~1×/sec
+  in `create_jobs_task.c` and the scheduler re-inits on change, so tuning them from the web
+  UI no longer needs a reboot (they used to latch at boot).
+- **Cosmetic** — a stale `current_work_B` can survive ~one slice after `clean_jobs`; Pool B
+  may count its authorize reply as +1 accepted share.
 
 ## Build reference
 
