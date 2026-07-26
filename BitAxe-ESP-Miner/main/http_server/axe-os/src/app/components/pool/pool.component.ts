@@ -118,7 +118,7 @@ export class PoolComponent implements OnInit {
           // firmware NVS rest_name values so the table-driven PATCH persists them.
           // info is read via bracket notation so the generated model need not change. ----
           dualEnable: [(info as any)['dualEnable'] == true],
-          dualIntervalMs: [(info as any)['dualIntervalMs'] ?? 500, [
+          dualIntervalMs: [(info as any)['dualIntervalMs'] ?? 3000, [
             Validators.required, Validators.min(100), Validators.max(60000)
           ]],
           dualRatioA: [(info as any)['dualRatioA'] ?? 50, [

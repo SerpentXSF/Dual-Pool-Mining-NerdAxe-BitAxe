@@ -14,8 +14,8 @@ built from this deliverable's `BitAxe-ESP-Miner/` source. Flash it at offset **`
 
 **SHA-256**
 ```
-esp-miner-factory.bin  e4c22c1caa675d7d83bcc50a805e9aa45297a1fbede4161193257c2a1d662c30
-esp-miner.bin          a3ad2aa8a310074bc5a293936e2ac2f7f558a3441cbeec7599d71c7b7eceb58f
+esp-miner-factory.bin  800c54d38b1561a9aac4d2a2d47059d2cf1c7e3313176ea2f412d10fca244608
+esp-miner.bin          7941b6a0bfe86f155ae58be4303dec5b307acec02a13d55a63e28933e4d3c8d9
 www.bin                271818395a005321746bd36c28d35916e569246f804a6acd567212a7e591edf3
 ```
 
@@ -27,9 +27,11 @@ www.bin                271818395a005321746bd36c28d35916e569246f804a6acd567212a7e
   `0cdc758a56360bf58a851fe91085a327ec97685a` (upstream-pinned commit).
 - App size 0x1a06a0 (~1.7 MB), 59% of the app partition free.
 - Includes the maintenance/error-rate hardening: **live-tunable Split Interval / ratio /
-  dual-enable** (no reboot), **Pool B version-mask coherence**, and **dropped-share
-  recovery** (a sub-difficulty nonce whose job slot was reused across pools is re-tested
-  against the other live templates and submitted to the pool that owns it). Earlier
+  dual-enable** (no reboot), **Pool B version-mask coherence**, **dropped-share recovery**
+  (a sub-difficulty nonce whose job slot was reused across pools is re-tested against the
+  other live templates and submitted to the pool that owns it), and a **default Split
+  Interval of 3000 ms** (field-tested: 500 ms → 3000 ms took one miner's error rate from
+  ~20% to ~3%). Earlier
   dual-pool builds were verified mining to both pools on real hardware (781 / 521 Gh/s
   split); these incremental changes compile cleanly but have not yet been re-run on
   physical hardware.

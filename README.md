@@ -102,7 +102,7 @@ via REST (`PATCH /api/system`). NVS `rest_name` keys:
 | Field | Key | Default |
 |-------|-----|---------|
 | Enable dual mining | `dualEnable` | false |
-| Split interval (ms) | `dualIntervalMs` | 500 (100–60000) |
+| Split interval (ms) | `dualIntervalMs` | 3000 (100–60000) |
 | Pool A share % | `dualRatioA` | 50 (0–100) |
 | Pool B host/port/user/password/TLS | `poolBUrl` `poolBPort` `poolBUser` `poolBPassword` `poolBTLS` | — |
 | Pool B failover host/port/user/password/TLS | `poolBFallbackUrl` `poolBFallbackPort` `poolBFallbackUser` `poolBFallbackPassword` `poolBFallbackTLS` | — |
@@ -138,7 +138,7 @@ Validates scheduler ratio accuracy, clamps, and the failover state machine.
 ## Verifying dual mining
 
 1. Configure two SHA-256d Stratum endpoints as Pool A and Pool B; set `dualEnable=true`,
-   `dualIntervalMs=500`, `dualRatioA=70`.
+   `dualIntervalMs=3000`, `dualRatioA=70`.
 2. `idf.py monitor` — confirm both `stratum_v1_task` and `stratum poolb` connect and
    stay connected (no disconnect churn).
 3. Over ~15 min, confirm accepted shares land on **both** pools, roughly 70/30 by count
@@ -150,10 +150,13 @@ Validates scheduler ratio accuracy, clamps, and the failover state machine.
 
 ## Tuning: switch speed & error rate
 
-- **Split Interval** sets how often the ASIC switches between Pool A and Pool B. The
-  default **500 ms** is aggressive (~120 switches/min). If you see an elevated **error
-  rate** on the dashboard, **raise it** — try **3000–5000 ms**. On this firmware the
-  change takes effect **within ~1 second, with no reboot**.
+- **Split Interval** sets how often the ASIC switches between Pool A and Pool B. **The
+  default is 3000 ms**, a field-tested sweet spot: on one miner, going from 500 ms to
+  3000 ms took the dashboard error rate from **~20% down to ~3%**. Lower values switch
+  more often and drive the ASIC's hardware error counter up via cross-pool work churn —
+  **500 ms is too aggressive.** If a miner *still* shows a high error rate at 3000 ms,
+  that unit is genuinely thermal/overclock-bound (see next bullet). Changes take effect
+  **within ~1 second, with no reboot.**
 - **What the dashboard "error rate" actually is:** it's read from the **ASIC's own
   hardware error counter** — a chip-health signal (nonces the silicon itself rejects),
   *not* a count of dual-pool share problems. Slowing the Split Interval reduces cross-pool

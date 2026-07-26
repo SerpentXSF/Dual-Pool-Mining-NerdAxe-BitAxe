@@ -82,7 +82,7 @@ static Settings settings[NVS_CONFIG_COUNT] = {
 
     // ---- Dual mining: Pool B active pool + controls ----
     [NVS_CONFIG_DUAL_ENABLE]                           = {.nvs_key_name = "dualenable",      .type = TYPE_BOOL,  .default_value = {.b   = false},                                       .rest_name = "dualEnable",                         .min = 0,  .max = 1},
-    [NVS_CONFIG_DUAL_INTERVAL_MS]                      = {.nvs_key_name = "dualintms",       .type = TYPE_U16,   .default_value = {.u16 = 500},                                         .rest_name = "dualIntervalMs",                     .min = 100, .max = 60000},
+    [NVS_CONFIG_DUAL_INTERVAL_MS]                      = {.nvs_key_name = "dualintms",       .type = TYPE_U16,   .default_value = {.u16 = 3000},                                        .rest_name = "dualIntervalMs",                     .min = 100, .max = 60000},
     [NVS_CONFIG_DUAL_RATIO_A]                          = {.nvs_key_name = "dualratioa",      .type = TYPE_U16,   .default_value = {.u16 = 50},                                          .rest_name = "dualRatioA",                         .min = 0,  .max = 100},
     [NVS_CONFIG_POOLB_URL]                             = {.nvs_key_name = "poolburl",        .type = TYPE_STR,   .default_value = {.str = (char *)CONFIG_POOL_B_STRATUM_URL},           .rest_name = "poolBUrl",                           .min = 0,  .max = NVS_STR_LIMIT},
     [NVS_CONFIG_POOLB_PORT]                            = {.nvs_key_name = "poolbport",       .type = TYPE_U16,   .default_value = {.u16 = CONFIG_POOL_B_STRATUM_PORT},                  .rest_name = "poolBPort",                          .min = 0,  .max = UINT16_MAX},
