@@ -85,6 +85,9 @@ few-KH/s lottery hashrate has no practical benefit). See
   each `bm_job` with its `pool_id`.
 - **Result routing** — `asic_result_task` reads `bm_job.pool_id` and submits each found
   share to the originating pool's socket, with that pool's credentials and extranonce.
+  **Dropped-share recovery:** if a rapid switch reuses a job slot before its nonce returns,
+  a below-difficulty nonce is re-tested against the other live templates and still submitted
+  to the pool that actually owns it, instead of being lost.
 - **Failover** (`components/dual_pool/pool_failover.c`) — per-pool
   `primary → failover → donate-slices-to-other-pool` state machine.
 

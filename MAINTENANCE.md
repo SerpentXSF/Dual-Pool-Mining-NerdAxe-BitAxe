@@ -84,8 +84,14 @@ ultimate maintenance strategy.
 - **Live-tunable** — Split Interval / Pool A share % / dual-enable are now re-read ~1×/sec
   in `create_jobs_task.c` and the scheduler re-inits on change, so tuning them from the web
   UI no longer needs a reboot (they used to latch at boot).
-- **Cosmetic** — a stale `current_work_B` can survive ~one slice after `clean_jobs`; Pool B
-  may count its authorize reply as +1 accepted share.
+- **Dropped-share recovery (applied)** — both pools share the single 128-slot ASIC job
+  ring, so a fast A↔B switch can overwrite a slot before its nonce returns; the nonce then
+  validates against the wrong template and would be dropped. `asic_result_task.c` now
+  re-tests any sub-difficulty nonce against every other live template (first match wins;
+  only while dual + V1) and submits it to the pool that actually owns it. Recovers boundary
+  shares — it does **not** change the ASIC hardware error counter on the dashboard (that's a
+  chip-health register, `REGISTER_ERROR_COUNT`, independent of software share validation).
+- **Cosmetic** — Pool B may count its authorize reply as +1 accepted share.
 
 ## Build reference
 

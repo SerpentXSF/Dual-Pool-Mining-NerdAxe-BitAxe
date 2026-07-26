@@ -161,6 +161,85 @@ void ASIC_result_task(void *pvParameters)
                 }
             }
         }
+        // DUAL-POOL BEGIN: dropped-share recovery. Pool A and Pool B share the single
+        // 128-slot ASIC job ring, so under rapid switching the slot this nonce belongs to
+        // can be overwritten by the *other* pool's job before the nonce returns. It then
+        // validates below difficulty against the wrong template and would be silently
+        // dropped. Before losing it, re-test the nonce against every other live template
+        // (cheap: a couple of SHA-256s each, first match wins) and, if one actually
+        // satisfies its difficulty, submit the share to THAT pool instead. Only runs while
+        // dual mining is active (V1), where the cross-pool slot collision can happen.
+        else if (GLOBAL_STATE->dual_enable && GLOBAL_STATE->stratum_protocol == STRATUM_PROTOCOL_V1) {
+            uint32_t vbits = asic_result->rolled_version ^ active_job->version;
+            bool     rec_found   = false;
+            uint8_t  rec_pool_id = POOL_A;
+            char    *rec_jobid   = NULL;
+            char    *rec_en2     = NULL;
+            uint32_t rec_ntime   = 0;
+            double   rec_diff    = 0;
+
+            pthread_mutex_lock(&GLOBAL_STATE->valid_jobs_lock);
+            for (int i = 0; i < 128; i++) {
+                if (i == job_id || GLOBAL_STATE->valid_jobs[i] == 0) continue;
+                bm_job *cand = GLOBAL_STATE->ASIC_TASK_MODULE.active_jobs[i];
+                if (cand == NULL) continue;
+                // The ASIC's rolled version bits (vbits) are template-independent; rebuild
+                // the rolled version against this candidate's base version to test it.
+                uint32_t cand_rv = cand->version | vbits;
+                double d = test_nonce_value(cand, asic_result->nonce, cand_rv);
+                if (d >= cand->pool_diff) {
+                    rec_found   = true;
+                    rec_pool_id = cand->pool_id;
+                    rec_jobid   = cand->jobid ? strdup(cand->jobid) : NULL;
+                    rec_en2     = cand->extranonce2 ? strdup(cand->extranonce2) : NULL;
+                    rec_ntime   = cand->ntime;
+                    rec_diff    = d;
+                    break;
+                }
+            }
+            pthread_mutex_unlock(&GLOBAL_STATE->valid_jobs_lock);
+
+            if (rec_found && rec_jobid != NULL && rec_en2 != NULL) {
+                bool is_b = (rec_pool_id == POOL_B);
+                char *user;
+                portMUX_TYPE *mux;
+                esp_transport_handle_t transport;
+                int uid;
+                if (is_b) {
+                    user = GLOBAL_STATE->SYSTEM_MODULE.poolB_is_using_failover
+                             ? GLOBAL_STATE->SYSTEM_MODULE.poolB_fb_user
+                             : GLOBAL_STATE->SYSTEM_MODULE.poolB_user;
+                    mux = &GLOBAL_STATE->stratum_muxB;
+                    taskENTER_CRITICAL(mux);
+                    transport = GLOBAL_STATE->transportB;
+                    uid = GLOBAL_STATE->send_uidB++;
+                    taskEXIT_CRITICAL(mux);
+                } else {
+                    user = GLOBAL_STATE->SYSTEM_MODULE.is_using_fallback
+                             ? GLOBAL_STATE->SYSTEM_MODULE.fallback_pool_user
+                             : GLOBAL_STATE->SYSTEM_MODULE.pool_user;
+                    mux = &GLOBAL_STATE->stratum_mux;
+                    taskENTER_CRITICAL(mux);
+                    transport = GLOBAL_STATE->transport;
+                    uid = GLOBAL_STATE->send_uid++;
+                    taskEXIT_CRITICAL(mux);
+                }
+                if (transport != NULL) {
+                    uint64_t sent_time_us = 0;
+                    int ret = STRATUM_V1_submit_share(transport, uid, user, rec_jobid, rec_en2,
+                                                      rec_ntime, asic_result->nonce, vbits, &sent_time_us);
+                    if (ret < 0) {
+                        ESP_LOGW(TAG, "Recovered-share submit failed (ret %d, errno %d: %s)", ret, errno, strerror(errno));
+                    } else {
+                        ESP_LOGI(TAG, "Recovered cross-slot share -> pool %c (diff %.1f, orig slot 0x%02X)",
+                                 is_b ? 'B' : 'A', rec_diff, job_id);
+                    }
+                }
+            }
+            free(rec_jobid);
+            free(rec_en2);
+        }
+        // DUAL-POOL END
 
         //log the ASIC response
         ESP_LOGI(TAG, "ID: %s, ASIC nr: %d, Core: %d/%d, ver: %08" PRIX32 " Nonce %08" PRIX32 " diff %.1f of %g.", active_job->jobid, asic_result->asic_nr, asic_result->core_id, asic_result->small_core_id, asic_result->rolled_version, asic_result->nonce, nonce_diff, active_job->pool_diff);

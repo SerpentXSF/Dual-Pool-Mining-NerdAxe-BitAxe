@@ -14,8 +14,8 @@ built from this deliverable's `BitAxe-ESP-Miner/` source. Flash it at offset **`
 
 **SHA-256**
 ```
-esp-miner-factory.bin  1890eefa5b3aabb409236a4c02917ec0667259421c2854e3687355c77dfc54ed
-esp-miner.bin          a3bcbf7b98391403c267c45e306173c6c90c7a3335d9a00fed0cbecc77ce033f
+esp-miner-factory.bin  e4c22c1caa675d7d83bcc50a805e9aa45297a1fbede4161193257c2a1d662c30
+esp-miner.bin          a3ad2aa8a310074bc5a293936e2ac2f7f558a3441cbeec7599d71c7b7eceb58f
 www.bin                271818395a005321746bd36c28d35916e569246f804a6acd567212a7e591edf3
 ```
 
@@ -25,11 +25,14 @@ www.bin                271818395a005321746bd36c28d35916e569246f804a6acd567212a7e
   production build.
 - Submodule: `components/libsecp256k1/libsecp256k1` = bitcoin-core/secp256k1 @
   `0cdc758a56360bf58a851fe91085a327ec97685a` (upstream-pinned commit).
-- App size 0x1a03a0 (~1.7 MB), 59% of the app partition free.
+- App size 0x1a06a0 (~1.7 MB), 59% of the app partition free.
 - Includes the maintenance/error-rate hardening: **live-tunable Split Interval / ratio /
-  dual-enable** (no reboot) and **Pool B version-mask coherence**. Earlier dual-pool builds
-  were verified mining to both pools on real hardware (781 / 521 Gh/s split); these two
-  incremental changes compile cleanly but have not yet been re-run on physical hardware.
+  dual-enable** (no reboot), **Pool B version-mask coherence**, and **dropped-share
+  recovery** (a sub-difficulty nonce whose job slot was reused across pools is re-tested
+  against the other live templates and submitted to the pool that owns it). Earlier
+  dual-pool builds were verified mining to both pools on real hardware (781 / 521 Gh/s
+  split); these incremental changes compile cleanly but have not yet been re-run on
+  physical hardware.
 
 ### Flash it
 - **Web flasher** (easiest): `cd ../Flasher && python serve.py` → preset
