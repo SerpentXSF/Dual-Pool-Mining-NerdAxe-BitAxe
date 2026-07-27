@@ -113,6 +113,7 @@ typedef struct
     bool poolB_is_using_failover;
     uint64_t poolB_shares_accepted;
     uint64_t poolB_shares_rejected;
+    uint64_t poolB_stale_drops; // Pool B nonces dropped at the ASIC (slot invalidated/reused) — diagnostic
     char poolB_connection_info[64];
     // DUAL-POOL END
     bool overheat_mode;

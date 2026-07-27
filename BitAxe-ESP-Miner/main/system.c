@@ -19,6 +19,7 @@
 #include "lwip/inet.h"
 
 #include "system.h"
+#include "pool_scheduler.h"
 #include "i2c_bitaxe.h"
 #include "INA260.h"
 #include "adc.h"
@@ -304,7 +305,15 @@ void SYSTEM_clean_jobs_queue(GlobalState * GLOBAL_STATE)
     queue_clear(&GLOBAL_STATE->stratum_queue);
 
     pthread_mutex_lock(&GLOBAL_STATE->valid_jobs_lock);
+    // DUAL-POOL: only Pool A calls this (Pool A clean_jobs). Both pools share the one
+    // 128-slot ASIC job ring, so blindly invalidating every slot kills Pool B's in-flight
+    // job too — Pool B sent no clean, so its work is still valid and its returning nonces
+    // would be dropped for ~0.5-1s. Preserve any slot currently owned by Pool B.
+    bm_job **jobs = GLOBAL_STATE->ASIC_TASK_MODULE.active_jobs;
     for (int i = 0; i < 128; i = i + 4) {
+        if (jobs != NULL && jobs[i] != NULL && jobs[i]->pool_id == POOL_B) {
+            continue;
+        }
         GLOBAL_STATE->valid_jobs[i] = 0;
     }
     pthread_mutex_unlock(&GLOBAL_STATE->valid_jobs_lock);

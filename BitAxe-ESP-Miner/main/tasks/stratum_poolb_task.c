@@ -11,6 +11,7 @@
 #include "esp_transport_tcp.h"
 #include "esp_transport_ssl.h"
 #include "pool_failover.h"
+#include "pool_scheduler.h"
 #include "stratum_recv_ctx.h"
 #include "freertos/task.h"
 #include <string.h>
@@ -164,8 +165,22 @@ void stratum_poolb_task(void *pvParameters)
 
             switch (poolb_msg.method) {
                 case MINING_NOTIFY:
-                    if (poolb_msg.mining_notification->clean_jobs && g->stratum_queueB.count > 0) {
-                        queue_clear(&g->stratum_queueB);
+                    if (poolb_msg.mining_notification->clean_jobs) {
+                        if (g->stratum_queueB.count > 0) {
+                            queue_clear(&g->stratum_queueB);
+                        }
+                        // Mirror of the Pool-A-side fix in SYSTEM_clean_jobs_queue: on a
+                        // Pool B clean, invalidate only Pool B's in-flight ASIC slots so
+                        // their late nonces aren't submitted to Pool B as stale rejects.
+                        // Pool A's slots are left untouched.
+                        pthread_mutex_lock(&g->valid_jobs_lock);
+                        bm_job **jobs = g->ASIC_TASK_MODULE.active_jobs;
+                        for (int i = 0; i < 128; i += 4) {
+                            if (jobs != NULL && jobs[i] != NULL && jobs[i]->pool_id == POOL_B) {
+                                g->valid_jobs[i] = 0;
+                            }
+                        }
+                        pthread_mutex_unlock(&g->valid_jobs_lock);
                     }
                     if (g->stratum_queueB.count == QUEUE_SIZE) {
                         mining_notify *old = (mining_notify *)queue_dequeue(&g->stratum_queueB);

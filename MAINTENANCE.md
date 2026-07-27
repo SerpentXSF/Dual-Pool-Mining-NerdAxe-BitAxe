@@ -84,13 +84,24 @@ ultimate maintenance strategy.
 - **Live-tunable** — Split Interval / Pool A share % / dual-enable are now re-read ~1×/sec
   in `create_jobs_task.c` and the scheduler re-inits on change, so tuning them from the web
   UI no longer needs a reboot (they used to latch at boot).
-- **Dropped-share recovery (applied)** — both pools share the single 128-slot ASIC job
-  ring, so a fast A↔B switch can overwrite a slot before its nonce returns; the nonce then
-  validates against the wrong template and would be dropped. `asic_result_task.c` now
-  re-tests any sub-difficulty nonce against every other live template (first match wins;
-  only while dual + V1) and submits it to the pool that actually owns it. Recovers boundary
-  shares — it does **not** change the ASIC hardware error counter on the dashboard (that's a
-  chip-health register, `REGISTER_ERROR_COUNT`, independent of software share validation).
+- **Pool-aware `clean_jobs` (applied — the big one)** — both pools share the single 128-slot
+  ASIC job ring. `SYSTEM_clean_jobs_queue` (`system.c`) is called only by Pool A, and used to
+  invalidate *every* used slot — silently killing Pool B's in-flight job on every Pool A clean
+  (~0.5–1 s of Pool B work lost; 1–2% of Pool B output against pools that re-template every
+  30–60 s). It now preserves `pool_id == POOL_B` slots; `stratum_poolb_task.c` does the mirror
+  on Pool B cleans. The `poolBStaleDrops` counter in `/api/system` tracks residual loss (should
+  stay ~0). This is the *at-source* fix; the dropped-share recovery below is now just backstop.
+- **A→B slice donation (applied)** — `create_jobs_task.c` now mines Pool B when Pool A has no
+  work (boot before first notify) or its socket is down, instead of idling the ASIC or
+  generating Pool A work whose shares get dropped. Mirrors the existing B→A donation.
+- **Pool B drain-to-newest (applied)** — Pool B now mines the newest queued notify, not the
+  oldest, so a long Pool-A-weighted stretch never leaves B on a stale (pool-expired) template.
+- **Dropped-share recovery (applied — backstop)** — `asic_result_task.c` re-tests a
+  sub-difficulty nonce against other live templates and submits to the pool that owns it. Note
+  (per review): near-zero yield in practice — clean-invalidated nonces are dropped upstream in
+  `BM1370_process_work` before this runs, and overwritten slots free their template. Harmless;
+  the real shares are saved by the pool-aware clean fix above. None of this moves the dashboard
+  error % (`REGISTER_ERROR_COUNT` is a chip-health register, independent of share validation).
 - **Cosmetic** — Pool B may count its authorize reply as +1 accepted share.
 
 ## Build reference

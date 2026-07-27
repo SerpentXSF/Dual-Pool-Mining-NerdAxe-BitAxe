@@ -217,6 +217,9 @@ static void system_api_add_config(cJSON *root, GlobalState *g) {
     cJSON_AddNumberToObject(root, "poolASharesRejected", (double)g->SYSTEM_MODULE.shares_rejected);
     cJSON_AddNumberToObject(root, "poolBSharesAccepted", (double)g->SYSTEM_MODULE.poolB_shares_accepted);
     cJSON_AddNumberToObject(root, "poolBSharesRejected", (double)g->SYSTEM_MODULE.poolB_shares_rejected);
+    // Diagnostic: Pool B nonces dropped at the ASIC (slot invalidated/reused). Should stay
+    // near zero with the pool-aware clean_jobs fix; a climbing value flags cross-pool loss.
+    cJSON_AddNumberToObject(root, "poolBStaleDrops", (double)g->SYSTEM_MODULE.poolB_stale_drops);
 
     char *sv2_chan_type = nvs_config_get_string(NVS_CONFIG_SV2_CHANNEL_TYPE);
     cJSON_AddStringToObject(root, "stratumV2ChannelType", sv2_chan_type ? sv2_chan_type : SV2_CHANNEL_TYPE_EXTENDED);

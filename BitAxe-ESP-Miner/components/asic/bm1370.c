@@ -392,6 +392,14 @@ task_result * BM1370_process_work(void * pvParameters)
     // Read active_jobs[job_id] under the lock
     pthread_mutex_lock(&GLOBAL_STATE->valid_jobs_lock);
     if (GLOBAL_STATE->valid_jobs[job_id] == 0 || GLOBAL_STATE->ASIC_TASK_MODULE.active_jobs[job_id] == NULL) {
+        // DUAL-POOL diagnostic: attribute a dropped nonce to Pool B when the slot was
+        // last owned by Pool B (active_jobs still points at the invalidated job when a
+        // clean zeroed valid_jobs). Watch poolBStaleDrops in /api/system — after the
+        // pool-aware clean_jobs fix it should stay near zero. pool_id == 1 is POOL_B.
+        bm_job *stale = GLOBAL_STATE->ASIC_TASK_MODULE.active_jobs[job_id];
+        if (stale != NULL && stale->pool_id == 1) {
+            GLOBAL_STATE->SYSTEM_MODULE.poolB_stale_drops++;
+        }
         pthread_mutex_unlock(&GLOBAL_STATE->valid_jobs_lock);
         ESP_LOGW(TAG, "Invalid job nonce found, 0x%02X", job_id);
         return NULL;

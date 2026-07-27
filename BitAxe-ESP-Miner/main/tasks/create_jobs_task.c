@@ -43,6 +43,37 @@ static void free_work_item(GlobalState *GLOBAL_STATE, void *work, stratum_protoc
     }
 }
 
+// DUAL-POOL: generate one Pool B job iff Pool B has servable work. Drains Pool B's notify
+// queue to the NEWEST template first (freeing older ones) so a long Pool-A-weighted stretch
+// never leaves Pool B mining a stale job that the pool has since expired. Returns true if a
+// Pool B job was generated and sent this cycle. Used both when the scheduler picks Pool B
+// and when Pool A can't take the slice (donation), so the ASIC never idles while B is live.
+static bool dual_serve_pool_b(GlobalState *GLOBAL_STATE, void **current_work_B, uint64_t *extranonce_2_B)
+{
+    void *newest = NULL, *n;
+    while ((n = queue_dequeue_timeout(&GLOBAL_STATE->stratum_queueB, 0)) != NULL) {
+        if (newest != NULL) {
+            STRATUM_V1_free_mining_notify((mining_notify *)newest);
+        }
+        newest = n;
+    }
+    if (newest != NULL) {
+        if (*current_work_B != NULL) {
+            STRATUM_V1_free_mining_notify((mining_notify *)*current_work_B);
+        }
+        *current_work_B = newest;
+        *extranonce_2_B = 0;
+    }
+    if (*current_work_B != NULL && GLOBAL_STATE->extranonce_strB != NULL
+            && GLOBAL_STATE->pool_difficultyB > 0) {
+        generate_work(GLOBAL_STATE, (mining_notify *)*current_work_B,
+                      *extranonce_2_B, GLOBAL_STATE->pool_difficultyB, POOL_B);
+        (*extranonce_2_B)++;
+        return true;
+    }
+    return false;
+}
+
 void create_jobs_task(void *pvParameters)
 {
     GlobalState *GLOBAL_STATE = (GlobalState *)pvParameters;
@@ -180,6 +211,15 @@ void create_jobs_task(void *pvParameters)
             }
         } else {
             if (current_work == NULL) {
+                // DUAL-POOL: Pool A has no work yet (boot before its first notify, or its
+                // work was discarded). Rather than idle the whole ASIC, mine Pool B if it
+                // has servable work (A→B donation). Falls through to the idle delay only
+                // when Pool B is also dry.
+                if (GLOBAL_STATE->dual_enable
+                        && dual_serve_pool_b(GLOBAL_STATE, &current_work_B, &extranonce_2_B)) {
+                    timeout_ms = ASIC_get_asic_job_frequency_ms(GLOBAL_STATE);
+                    continue;
+                }
                 vTaskDelay(100 / portTICK_PERIOD_MS);
                 continue;
             }
@@ -226,25 +266,16 @@ void create_jobs_task(void *pvParameters)
                 vmask_warned = true;
             }
             pool_id_t sel = pool_scheduler_select(&scheduler, esp_timer_get_time());
-            if (sel == POOL_B) {
-                // Refresh Pool B work if a newer notify arrived (non-blocking).
-                void *bwork = queue_dequeue_timeout(&GLOBAL_STATE->stratum_queueB, 0);
-                if (bwork != NULL) {
-                    if (current_work_B != NULL) {
-                        STRATUM_V1_free_mining_notify((mining_notify *)current_work_B);
-                    }
-                    current_work_B = bwork;
-                    extranonce_2_B = 0;
-                }
-                if (current_work_B != NULL && GLOBAL_STATE->extranonce_strB != NULL
-                        && GLOBAL_STATE->pool_difficultyB > 0) {
-                    generate_work(GLOBAL_STATE, (mining_notify *)current_work_B,
-                                  extranonce_2_B, GLOBAL_STATE->pool_difficultyB, POOL_B);
-                    extranonce_2_B++;
+            // Serve Pool B when the scheduler picks it, OR when Pool A's socket is down so
+            // we don't burn the slice generating Pool A work whose shares get dropped at
+            // submit. If Pool B has no work, fall through and let Pool A take the slice.
+            bool a_down = (GLOBAL_STATE->transport == NULL);
+            if (sel == POOL_B || a_down) {
+                if (dual_serve_pool_b(GLOBAL_STATE, &current_work_B, &extranonce_2_B)) {
                     timeout_ms = ASIC_get_asic_job_frequency_ms(GLOBAL_STATE);
                     continue;
                 }
-                // No Pool B work available yet -> donate this slice to Pool A (fall through).
+                // No Pool B work available -> donate this slice to Pool A (fall through).
             }
         }
         // DUAL-POOL END

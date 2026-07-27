@@ -14,8 +14,8 @@ built from this deliverable's `BitAxe-ESP-Miner/` source. Flash it at offset **`
 
 **SHA-256**
 ```
-esp-miner-factory.bin  800c54d38b1561a9aac4d2a2d47059d2cf1c7e3313176ea2f412d10fca244608
-esp-miner.bin          7941b6a0bfe86f155ae58be4303dec5b307acec02a13d55a63e28933e4d3c8d9
+esp-miner-factory.bin  d41f31217ecf192c59675284082c27512b62a74d4eac69f0f142f6bd6e6c6c98
+esp-miner.bin          32d7ab16fb10e5cccc97cb077223f5b6898881e301750d0a426e2e5d0496655a
 www.bin                271818395a005321746bd36c28d35916e569246f804a6acd567212a7e591edf3
 ```
 
@@ -25,7 +25,12 @@ www.bin                271818395a005321746bd36c28d35916e569246f804a6acd567212a7e
   production build.
 - Submodule: `components/libsecp256k1/libsecp256k1` = bitcoin-core/secp256k1 @
   `0cdc758a56360bf58a851fe91085a327ec97685a` (upstream-pinned commit).
-- App size 0x1a06a0 (~1.7 MB), 59% of the app partition free.
+- App size 0x1a07d0 (~1.7 MB), 59% of the app partition free.
+- Adds the Fable-review efficiency fixes: **pool-aware `clean_jobs`** (a Pool A clean no
+  longer invalidates Pool B's in-flight ASIC jobs — the main recurring dual-mode share
+  loss), **A→B slice donation** (mine Pool B instead of idling/wasting when Pool A has no
+  work or its socket is down), **Pool B drain-to-newest** (never mine a stale B template),
+  and a **`poolBStaleDrops`** diagnostic counter in `/api/system`.
 - Includes the maintenance/error-rate hardening: **live-tunable Split Interval / ratio /
   dual-enable** (no reboot), **Pool B version-mask coherence**, **dropped-share recovery**
   (a sub-difficulty nonce whose job slot was reused across pools is re-tested against the
