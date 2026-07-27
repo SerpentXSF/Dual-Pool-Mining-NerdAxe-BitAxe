@@ -19,6 +19,25 @@
 
 static const char *TAG = "asic_result";
 
+// DUAL-POOL: submit a Pool B share while holding transportB_lock, so the poolb task can't
+// close/destroy g->transportB mid-write (use-after-free on reconnect). Returns the submit
+// result, or POOLB_NO_TRANSPORT if Pool B isn't connected. Caller takes the uid separately.
+#define POOLB_NO_TRANSPORT (-2)
+static int poolb_submit_share_locked(GlobalState *g, int uid, const char *user,
+                                     const char *jobid, const char *extranonce2, uint32_t ntime,
+                                     uint32_t nonce, uint32_t version_bits)
+{
+    pthread_mutex_lock(&g->transportB_lock);
+    esp_transport_handle_t t = g->transportB;
+    int ret = POOLB_NO_TRANSPORT;
+    if (t != NULL) {
+        uint64_t sent_time_us = 0;
+        ret = STRATUM_V1_submit_share(t, uid, user, jobid, extranonce2, ntime, nonce, version_bits, &sent_time_us);
+    }
+    pthread_mutex_unlock(&g->transportB_lock);
+    return ret;
+}
+
 void ASIC_result_task(void *pvParameters)
 {
     GlobalState *GLOBAL_STATE = (GlobalState *)pvParameters;
@@ -109,34 +128,38 @@ void ASIC_result_task(void *pvParameters)
                     ESP_LOGW(TAG, "Failed to submit SV2 share (ret=%d, errno=%d: %s)",
                              ret, errno, strerror(errno));
                 }
+            } else if (is_b) {
+                // V1 Pool B: submit under transportB_lock so a Pool B reconnect can't free
+                // the transport mid-write. uid is taken under the muxB spinlock as before.
+                char *user = GLOBAL_STATE->SYSTEM_MODULE.poolB_is_using_failover
+                               ? GLOBAL_STATE->SYSTEM_MODULE.poolB_fb_user
+                               : GLOBAL_STATE->SYSTEM_MODULE.poolB_user;
+                taskENTER_CRITICAL(&GLOBAL_STATE->stratum_muxB);
+                int uid = GLOBAL_STATE->send_uidB++;
+                taskEXIT_CRITICAL(&GLOBAL_STATE->stratum_muxB);
+                int ret = poolb_submit_share_locked(GLOBAL_STATE, uid, user,
+                              active_job->jobid, active_job->extranonce2, active_job->ntime,
+                              asic_result->nonce, version_bits);
+                if (ret == POOLB_NO_TRANSPORT) {
+                    ESP_LOGW(TAG, "No stratum connection, dropping share (job 0x%02X, pool B)", job_id);
+                } else if (ret < 0) {
+                    ESP_LOGW(TAG, "Unable to write share to socket (ret: %d, errno %d: %s)", ret, errno, strerror(errno));
+                }
             } else {
-                // V1: submit with JSON-RPC, routed to the originating pool.
-                char * user;
-                portMUX_TYPE *mux;
+                // V1 Pool A: unchanged from upstream (read under mux, submit outside).
+                char *user = GLOBAL_STATE->SYSTEM_MODULE.is_using_fallback
+                               ? GLOBAL_STATE->SYSTEM_MODULE.fallback_pool_user
+                               : GLOBAL_STATE->SYSTEM_MODULE.pool_user;
+                portMUX_TYPE *mux = &GLOBAL_STATE->stratum_mux;
                 esp_transport_handle_t transport;
                 int uid;
-                if (is_b) {
-                    user = GLOBAL_STATE->SYSTEM_MODULE.poolB_is_using_failover
-                             ? GLOBAL_STATE->SYSTEM_MODULE.poolB_fb_user
-                             : GLOBAL_STATE->SYSTEM_MODULE.poolB_user;
-                    mux = &GLOBAL_STATE->stratum_muxB;
-                    taskENTER_CRITICAL(mux);
-                    transport = GLOBAL_STATE->transportB;
-                    uid = GLOBAL_STATE->send_uidB++;
-                    taskEXIT_CRITICAL(mux);
-                } else {
-                    user = GLOBAL_STATE->SYSTEM_MODULE.is_using_fallback
-                             ? GLOBAL_STATE->SYSTEM_MODULE.fallback_pool_user
-                             : GLOBAL_STATE->SYSTEM_MODULE.pool_user;
-                    mux = &GLOBAL_STATE->stratum_mux;
-                    taskENTER_CRITICAL(mux);
-                    transport = GLOBAL_STATE->transport;
-                    uid = GLOBAL_STATE->send_uid++;
-                    taskEXIT_CRITICAL(mux);
-                }
+                taskENTER_CRITICAL(mux);
+                transport = GLOBAL_STATE->transport;
+                uid = GLOBAL_STATE->send_uid++;
+                taskEXIT_CRITICAL(mux);
 
                 if (transport == NULL) {
-                    ESP_LOGW(TAG, "No stratum connection, dropping share (job 0x%02X, pool %c)", job_id, is_b ? 'B' : 'A');
+                    ESP_LOGW(TAG, "No stratum connection, dropping share (job 0x%02X, pool A)", job_id);
                 } else {
                     uint64_t sent_time_us = 0;
                     int ret = STRATUM_V1_submit_share(
@@ -201,39 +224,39 @@ void ASIC_result_task(void *pvParameters)
 
             if (rec_found && rec_jobid != NULL && rec_en2 != NULL) {
                 bool is_b = (rec_pool_id == POOL_B);
-                char *user;
-                portMUX_TYPE *mux;
-                esp_transport_handle_t transport;
-                int uid;
+                int ret;
                 if (is_b) {
-                    user = GLOBAL_STATE->SYSTEM_MODULE.poolB_is_using_failover
-                             ? GLOBAL_STATE->SYSTEM_MODULE.poolB_fb_user
-                             : GLOBAL_STATE->SYSTEM_MODULE.poolB_user;
-                    mux = &GLOBAL_STATE->stratum_muxB;
-                    taskENTER_CRITICAL(mux);
-                    transport = GLOBAL_STATE->transportB;
-                    uid = GLOBAL_STATE->send_uidB++;
-                    taskEXIT_CRITICAL(mux);
+                    char *user = GLOBAL_STATE->SYSTEM_MODULE.poolB_is_using_failover
+                                   ? GLOBAL_STATE->SYSTEM_MODULE.poolB_fb_user
+                                   : GLOBAL_STATE->SYSTEM_MODULE.poolB_user;
+                    taskENTER_CRITICAL(&GLOBAL_STATE->stratum_muxB);
+                    int uid = GLOBAL_STATE->send_uidB++;
+                    taskEXIT_CRITICAL(&GLOBAL_STATE->stratum_muxB);
+                    ret = poolb_submit_share_locked(GLOBAL_STATE, uid, user, rec_jobid, rec_en2,
+                                                    rec_ntime, asic_result->nonce, vbits);
                 } else {
-                    user = GLOBAL_STATE->SYSTEM_MODULE.is_using_fallback
-                             ? GLOBAL_STATE->SYSTEM_MODULE.fallback_pool_user
-                             : GLOBAL_STATE->SYSTEM_MODULE.pool_user;
-                    mux = &GLOBAL_STATE->stratum_mux;
-                    taskENTER_CRITICAL(mux);
-                    transport = GLOBAL_STATE->transport;
-                    uid = GLOBAL_STATE->send_uid++;
-                    taskEXIT_CRITICAL(mux);
-                }
-                if (transport != NULL) {
-                    uint64_t sent_time_us = 0;
-                    int ret = STRATUM_V1_submit_share(transport, uid, user, rec_jobid, rec_en2,
+                    char *user = GLOBAL_STATE->SYSTEM_MODULE.is_using_fallback
+                                   ? GLOBAL_STATE->SYSTEM_MODULE.fallback_pool_user
+                                   : GLOBAL_STATE->SYSTEM_MODULE.pool_user;
+                    taskENTER_CRITICAL(&GLOBAL_STATE->stratum_mux);
+                    esp_transport_handle_t transport = GLOBAL_STATE->transport;
+                    int uid = GLOBAL_STATE->send_uid++;
+                    taskEXIT_CRITICAL(&GLOBAL_STATE->stratum_mux);
+                    if (transport != NULL) {
+                        uint64_t sent_time_us = 0;
+                        ret = STRATUM_V1_submit_share(transport, uid, user, rec_jobid, rec_en2,
                                                       rec_ntime, asic_result->nonce, vbits, &sent_time_us);
-                    if (ret < 0) {
-                        ESP_LOGW(TAG, "Recovered-share submit failed (ret %d, errno %d: %s)", ret, errno, strerror(errno));
                     } else {
-                        ESP_LOGI(TAG, "Recovered cross-slot share -> pool %c (diff %.1f, orig slot 0x%02X)",
-                                 is_b ? 'B' : 'A', rec_diff, job_id);
+                        ret = POOLB_NO_TRANSPORT;
                     }
+                }
+                if (ret == POOLB_NO_TRANSPORT) {
+                    // best-effort recovery: no connection, drop quietly
+                } else if (ret < 0) {
+                    ESP_LOGW(TAG, "Recovered-share submit failed (ret %d, errno %d: %s)", ret, errno, strerror(errno));
+                } else {
+                    ESP_LOGI(TAG, "Recovered cross-slot share -> pool %c (diff %.1f, orig slot 0x%02X)",
+                             is_b ? 'B' : 'A', rec_diff, job_id);
                 }
             }
             free(rec_jobid);

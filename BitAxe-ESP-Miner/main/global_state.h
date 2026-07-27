@@ -207,6 +207,13 @@ typedef struct
     uint32_t version_maskB;
     int send_uidB;
     portMUX_TYPE stratum_muxB;
+    // Reconnect-window hardening (Pool B): pthread mutexes (not the spinlocks above,
+    // which can't wrap blocking socket I/O or strdup). transportB_lock serialises a
+    // Pool B share submit against the poolb task closing/destroying transportB;
+    // extranonceB_lock serialises the extranonce_strB swap/free against its read in
+    // create_jobs. Prevents use-after-free when a Pool B reconnect coincides with a slice.
+    pthread_mutex_t transportB_lock;
+    pthread_mutex_t extranonceB_lock;
     bool dual_enable;
     uint16_t dual_interval_ms;
     uint8_t  dual_ratio_a;

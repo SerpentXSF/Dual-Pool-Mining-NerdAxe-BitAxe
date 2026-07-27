@@ -167,6 +167,8 @@ void SYSTEM_init_system(GlobalState * GLOBAL_STATE)
     GLOBAL_STATE->dual_interval_ms = nvs_config_get_u16(NVS_CONFIG_DUAL_INTERVAL_MS);
     GLOBAL_STATE->dual_ratio_a     = (uint8_t) nvs_config_get_u16(NVS_CONFIG_DUAL_RATIO_A);
     GLOBAL_STATE->stratum_muxB     = (portMUX_TYPE)portMUX_INITIALIZER_UNLOCKED;
+    pthread_mutex_init(&GLOBAL_STATE->transportB_lock, NULL);
+    pthread_mutex_init(&GLOBAL_STATE->extranonceB_lock, NULL);
     GLOBAL_STATE->transportB       = NULL;
     GLOBAL_STATE->extranonce_strB  = NULL;
     GLOBAL_STATE->extranonce_2_lenB = 0;

@@ -76,11 +76,14 @@ ultimate maintenance strategy.
   startup **warning fires when `version_maskB != version_mask`** — if the two pools disagree
   (virtually never; nearly all use `0x1fffe000`), Pool B can still reject the shares whose
   version bits fall outside its own mask, because the single chip serves both pools.
-- **Reconnect-window races** — `transportB` (submit after leaving the critical section)
-  and `extranonce_strB` (freed while `create_jobs` may hold the pointer) are use-after-free
-  under a reconnect coinciding with a Pool B slice. Both **mirror the same patterns
-  upstream already has for Pool A**; Pool B reconnects more often so exposure is a bit
-  higher. Hardening (refcount / submit-under-mutex) is a good follow-up.
+- **Reconnect-window races (applied)** — `transportB` and `extranonce_strB` were
+  use-after-free if a Pool B reconnect coincided with a Pool B slice. Fixed with two pthread
+  mutexes (spinlocks can't wrap socket I/O / `strdup`): `transportB_lock` serialises the Pool
+  B share submit (`asic_result_task.c` `poolb_submit_share_locked`) against the poolb task's
+  close/destroy, and the poolb task now only publishes `transportB` **after** a successful
+  connect (via a local handle). `extranonceB_lock` serialises the `extranonce_strB` swap/free
+  against `create_jobs` `generate_work`, which now copies the string under the lock and frees
+  the copy right after the coinbase hash. Pool A's paths are left byte-for-byte as upstream.
 - **Live-tunable** — Split Interval / Pool A share % / dual-enable are now re-read ~1×/sec
   in `create_jobs_task.c` and the scheduler re-inits on change, so tuning them from the web
   UI no longer needs a reboot (they used to latch at boot).

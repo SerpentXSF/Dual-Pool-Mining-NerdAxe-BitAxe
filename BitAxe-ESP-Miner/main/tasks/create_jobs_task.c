@@ -18,6 +18,7 @@
 #include "utils.h"
 #include "pool_scheduler.h"
 #include "nvs_config.h"
+#include <pthread.h>
 
 static const char *TAG = "create_jobs_task";
 
@@ -298,8 +299,7 @@ void create_jobs_task(void *pvParameters)
 
 static void generate_work(GlobalState *GLOBAL_STATE, mining_notify *notification, uint64_t extranonce_2, double difficulty, uint8_t pool_id)
 {
-    // Select the pool-specific extranonce context and version mask.
-    const char *en_str  = (pool_id == POOL_B) ? GLOBAL_STATE->extranonce_strB : GLOBAL_STATE->extranonce_str;
+    // Select the pool-specific extranonce length and version mask.
     int         en2_len = (pool_id == POOL_B) ? GLOBAL_STATE->extranonce_2_lenB : GLOBAL_STATE->extranonce_2_len;
     // The ASIC is only ever configured with Pool A's version_mask (ASIC_set_version_mask
     // is called for Pool A only), so the chip rolls versions with THAT mask regardless of
@@ -318,14 +318,32 @@ static void generate_work(GlobalState *GLOBAL_STATE, mining_notify *notification
         ESP_LOGE(TAG, "extranonce_2_len %d exceeds maximum %d, skipping job", en2_len, MAX_EXTRANONCE2_LEN);
         return;
     }
+
+    // Pool B's extranonce string can be swapped + freed by the poolb task on reconnect while
+    // we're mid-use. Take an owned copy under extranonceB_lock, then free it right after the
+    // coinbase hash (its only use). Pool A's extranonce is owned by the single Pool A pipeline,
+    // so it's used directly as upstream does. free(en_owned) is a no-op for Pool A (NULL).
+    char *en_owned = NULL;
+    const char *en_str;
+    if (pool_id == POOL_B) {
+        pthread_mutex_lock(&GLOBAL_STATE->extranonceB_lock);
+        if (GLOBAL_STATE->extranonce_strB != NULL) {
+            en_owned = strdup(GLOBAL_STATE->extranonce_strB);
+        }
+        pthread_mutex_unlock(&GLOBAL_STATE->extranonceB_lock);
+        en_str = en_owned;
+    } else {
+        en_str = GLOBAL_STATE->extranonce_str;
+    }
     if (en_str == NULL) {
-        return; // pool not fully subscribed yet
+        return; // pool not fully subscribed yet (en_owned is NULL, nothing to free)
     }
     char extranonce_2_str[MAX_EXTRANONCE2_STR];
     extranonce_2_generate(extranonce_2, en2_len, extranonce_2_str);
 
     uint8_t coinbase_tx_hash[32];
     calculate_coinbase_tx_hash(notification->coinbase_1, notification->coinbase_2, en_str, extranonce_2_str, coinbase_tx_hash);
+    free(en_owned); // en_str not used past this point; no-op (NULL) for Pool A
 
     uint8_t merkle_root[32];
     calculate_merkle_root_hash(coinbase_tx_hash, (uint8_t(*)[32])notification->merkle_branches, notification->n_merkle_branches, merkle_root);

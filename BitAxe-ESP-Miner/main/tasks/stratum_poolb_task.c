@@ -14,6 +14,7 @@
 #include "pool_scheduler.h"
 #include "stratum_recv_ctx.h"
 #include "freertos/task.h"
+#include <pthread.h>
 #include <string.h>
 
 // Pool B mirrors the Pool A V1 setup (configure -> subscribe -> authorize) but on
@@ -37,14 +38,18 @@ static int poolb_next_uid(GlobalState *g)
 
 static void poolb_close(GlobalState *g)
 {
-    taskENTER_CRITICAL(&g->stratum_muxB);
+    // Hold transportB_lock across NULL-out + close + destroy so a Pool B share submit
+    // in asic_result_task (which takes the same lock) can't be mid-write on this handle
+    // as we free it. A blocking mutex is required — the spinlock stratum_muxB can't wrap
+    // esp_transport_close/destroy.
+    pthread_mutex_lock(&g->transportB_lock);
     esp_transport_handle_t t = g->transportB;
     g->transportB = NULL;
-    taskEXIT_CRITICAL(&g->stratum_muxB);
     if (t != NULL) {
         esp_transport_close(t);
         esp_transport_destroy(t);
     }
+    pthread_mutex_unlock(&g->transportB_lock);
     queue_clear(&g->stratum_queueB);
     vTaskDelay(1000 / portTICK_PERIOD_MS);
 }
@@ -106,27 +111,32 @@ void stratum_poolb_task(void *pvParameters)
             continue;
         }
 
-        g->transportB = STRATUM_V1_transport_init(tls, NULL);
-        if (g->transportB == NULL) {
+        // Build + connect on a LOCAL handle so a failed transport is never published to
+        // g->transportB (the submit path would otherwise see a half-open handle we then
+        // free). Only publish — under transportB_lock — once the connection is up.
+        esp_transport_handle_t t = STRATUM_V1_transport_init(tls, NULL);
+        if (t == NULL) {
             ESP_LOGE(TAG, "Pool B transport init failed");
             pool_failover_step(&fo, PF_EV_DISCONNECTED);
             vTaskDelay(3000 / portTICK_PERIOD_MS);
             continue;
         }
         if (tls != DISABLED) {
-            esp_transport_ssl_set_common_name(g->transportB, url);
+            esp_transport_ssl_set_common_name(t, url);
         }
 
-        if (esp_transport_connect(g->transportB, ci.host_ip, port, POOLB_TRANSPORT_TIMEOUT_MS) != ESP_OK) {
+        if (esp_transport_connect(t, ci.host_ip, port, POOLB_TRANSPORT_TIMEOUT_MS) != ESP_OK) {
             ESP_LOGE(TAG, "Pool B connect failed %s:%d", url, port);
-            esp_transport_close(g->transportB);
-            esp_transport_destroy(g->transportB);
-            g->transportB = NULL;
+            esp_transport_close(t);
+            esp_transport_destroy(t);
             pool_failover_step(&fo, PF_EV_DISCONNECTED);
             vTaskDelay(3000 / portTICK_PERIOD_MS);
             continue;
         }
-        stratum_socket_set_options(g->transportB);
+        stratum_socket_set_options(t);
+        pthread_mutex_lock(&g->transportB_lock);
+        g->transportB = t;
+        pthread_mutex_unlock(&g->transportB_lock);
         pool_failover_step(&fo, PF_EV_CONNECTED);
         snprintf(m->poolB_connection_info, sizeof(m->poolB_connection_info),
                  "%s%s", (ci.addr_family == AF_INET6) ? "IPv6" : "IPv4",
@@ -203,11 +213,15 @@ void stratum_poolb_task(void *pvParameters)
                 case MINING_SET_EXTRANONCE:
                 case STRATUM_RESULT_SUBSCRIBE:
                     if (poolb_msg.extranonce_str != NULL && poolb_msg.extranonce_2_len > 0) {
+                        // Swap the pointer under extranonceB_lock so create_jobs' generate_work
+                        // (which copies the string under the same lock) never reads it mid-free.
+                        pthread_mutex_lock(&g->extranonceB_lock);
                         char *old = g->extranonce_strB;
                         g->extranonce_strB = poolb_msg.extranonce_str;
-                        poolb_msg.extranonce_str = NULL; // ownership transferred
                         g->extranonce_2_lenB = poolb_msg.extranonce_2_len;
-                        free(old);
+                        pthread_mutex_unlock(&g->extranonceB_lock);
+                        poolb_msg.extranonce_str = NULL; // ownership transferred
+                        free(old); // safe: unreferenced once the swap is published under the lock
                         ESP_LOGI(TAG, "Pool B extranonce set, en2_len=%d", g->extranonce_2_lenB);
                     }
                     break;
