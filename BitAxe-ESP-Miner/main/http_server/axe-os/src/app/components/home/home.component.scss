@@ -105,6 +105,32 @@
         .gs-resizable-handle {
             display: block !important;
         }
+
+        // The gridstack default SE handle glyph is near-invisible on the dark theme,
+        // so resizing looks "missing". Draw a clear accent-coloured corner grip and give
+        // it a comfortable hit area. Positioned via right/bottom (not transform).
+        .ui-resizable-se {
+            width: 20px;
+            height: 20px;
+            right: 2px;
+            bottom: 2px;
+            background-image: none !important;
+            transform: none !important;
+            cursor: nwse-resize;
+            z-index: 3;
+
+            &::after {
+                content: '';
+                position: absolute;
+                right: 3px;
+                bottom: 3px;
+                width: 11px;
+                height: 11px;
+                border-right: 3px solid var(--primary-color);
+                border-bottom: 3px solid var(--primary-color);
+                border-bottom-right-radius: 4px;
+            }
+        }
     }
 }
 

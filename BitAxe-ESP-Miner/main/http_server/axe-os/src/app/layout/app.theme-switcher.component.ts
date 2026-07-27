@@ -51,12 +51,12 @@ interface Accent {
 export class ThemeSwitcherComponent implements OnInit {
   private static readonly KEY = 'serpentx-accent';
 
-  // Default is SerpentX Gold (matches the wordmark). "AxeOS Red" reverts to stock.
+  // Default is AxeOS Blue (first entry). The rest, incl. SerpentX Gold, are opt-in.
   public accents: Accent[] = [
+    { name: 'AxeOS Blue',    color: '#3B82F6', text: '#ffffff' },
     { name: 'SerpentX Gold', color: '#F7B32B', text: '#1a1a1a' },
     { name: 'AxeOS Red',     color: '#F80421', text: '#ffffff' },
     { name: 'Emerald',       color: '#10B981', text: '#04241a' },
-    { name: 'Azure',         color: '#3B82F6', text: '#ffffff' },
     { name: 'Violet',        color: '#8B5CF6', text: '#ffffff' },
     { name: 'Cyan',          color: '#06B6D4', text: '#04242b' },
   ];
