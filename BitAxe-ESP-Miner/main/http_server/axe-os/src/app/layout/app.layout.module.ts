@@ -17,6 +17,7 @@ import { AppMenuComponent } from './app.menu.component';
 import { AppMenuitemComponent } from './app.menuitem.component';
 import { AppSidebarComponent } from './app.sidebar.component';
 import { AppTopBarComponent } from './app.topbar.component';
+import { ThemeSwitcherComponent } from './app.theme-switcher.component';
 import { LoadingComponent } from '../components/loading/loading.component';
 import { WifiIconComponent } from '../components/wifi-icon/wifi-icon.component';
 
@@ -24,6 +25,7 @@ import { WifiIconComponent } from '../components/wifi-icon/wifi-icon.component';
     declarations: [
         AppMenuitemComponent,
         AppTopBarComponent,
+        ThemeSwitcherComponent,
         AppFooterComponent,
         AppMenuComponent,
         AppSidebarComponent,
