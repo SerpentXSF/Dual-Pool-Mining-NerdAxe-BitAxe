@@ -58,11 +58,20 @@ file swap.
    `CMakeLists.txt`, the Angular UI — are additive and listed above; mark them too as you
    revisit each.)
 
-**Still recommended:**
-3. **Isolate the UI delta** into dedicated Angular child components, so upstream
-   `pool.component.html` / `home.component.html` carry only a one-line `<app-dual-pool-*>`.
-4. **Version string:** ship `<upstream-version>-dualpool` (so users know the base) rather
-   than the fixed `DualMiner-1.0` pin, which conflicts every release by design.
+**Also applied:**
+3. ✅ **UI delta isolated** — the dual-mining settings block and the per-pool hashrate card
+   now live in their own components (`components/pool/dual-mining-settings.component.ts`,
+   `components/home/pool-hashrate.component.ts`). Upstream `pool.component.html` /
+   `home.component.html` carry only a one-line `<app-dual-mining-settings>` /
+   `<app-pool-hashrate>`. The settings component uses
+   `viewProviders: [{ provide: ControlContainer, useExisting: FormGroupDirective }]` so its
+   `formControlName` bindings resolve against the parent pool form with no `@Input` plumbing.
+4. ✅ **Version string** — set to `SerpentX-DualPool-1.1` in `version.txt`. Note: `version.txt`
+   is *our own net-new file* (upstream ESP-Miner has none — it derives the version from
+   `git describe`, see the `generate-version.js` fallback), so it never actually conflicts on
+   an upstream merge. The earlier `<upstream>-dualpool` idea assumed a shared file; since there
+   isn't one, a branded string is fine. Firmware `PROJECT_VER` and the web `axeOSVersion` both
+   read this one file, so they always match (no version-mismatch banner). Bump it per release.
 
 The end game: `dual_pool/` is clean enough to eventually PR upstream, which is the
 ultimate maintenance strategy.

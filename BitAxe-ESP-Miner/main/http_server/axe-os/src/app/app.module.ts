@@ -16,8 +16,10 @@ import { Api } from './generated/api';
 import { ApiConfiguration } from './generated/api-configuration';
 import { EditComponent } from './components/edit/edit.component';
 import { PoolComponent } from './components/pool/pool.component';
+import { DualMiningSettingsComponent } from './components/pool/dual-mining-settings.component';
 import { NetworkEditComponent } from './components/network-edit/network.edit.component';
 import { HomeComponent } from './components/home/home.component';
+import { PoolHashrateComponent } from './components/home/pool-hashrate.component';
 import { ModalComponent } from './components/modal/modal.component';
 import { TooltipIconComponent } from './components/tooltip-icon/tooltip-icon.component';
 import { TooltipTextIconComponent } from './components/tooltip-text-icon/tooltip-text-icon.component';
@@ -59,7 +61,9 @@ const components = [
   LogsComponent,
   SystemComponent,
   UpdateComponent,
-  PoolComponent
+  PoolComponent,
+  DualMiningSettingsComponent,
+  PoolHashrateComponent
 ];
 
 @NgModule({
