@@ -149,7 +149,8 @@ void stratum_poolb_task(void *pvParameters)
         g->send_uidB = 1;
         STRATUM_V1_configure_version_rolling(g->transportB, poolb_next_uid(g), &g->version_maskB);
         STRATUM_V1_subscribe(g->transportB, poolb_next_uid(g), g->DEVICE_CONFIG.family.asic.name);
-        STRATUM_V1_authorize(g->transportB, poolb_next_uid(g), usr, pw);
+        int poolb_authorize_uid = poolb_next_uid(g);
+        STRATUM_V1_authorize(g->transportB, poolb_authorize_uid, usr, pw);
 
         while (1) {
             if (!g->dual_enable) {
@@ -227,6 +228,16 @@ void stratum_poolb_task(void *pvParameters)
                     break;
 
                 case STRATUM_RESULT:
+                    // The authorize reply is a boolean result too; don't miscount it as an
+                    // accepted share. (configure/subscribe come back as their own result
+                    // methods above, so only authorize and real share acks reach here.)
+                    if (poolb_msg.message_id == poolb_authorize_uid) {
+                        if (!poolb_msg.response_success) {
+                            ESP_LOGW(TAG, "Pool B authorize failed: %s",
+                                     poolb_msg.error_str ? poolb_msg.error_str : "unknown");
+                        }
+                        break;
+                    }
                     if (poolb_msg.response_success) {
                         m->poolB_shares_accepted++;
                     } else {

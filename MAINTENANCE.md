@@ -105,7 +105,9 @@ ultimate maintenance strategy.
   `BM1370_process_work` before this runs, and overwritten slots free their template. Harmless;
   the real shares are saved by the pool-aware clean fix above. None of this moves the dashboard
   error % (`REGISTER_ERROR_COUNT` is a chip-health register, independent of share validation).
-- **Cosmetic** — Pool B may count its authorize reply as +1 accepted share.
+- **Cosmetic (fixed)** — Pool B no longer counts its authorize reply as an accepted share:
+  `stratum_poolb_task.c` skips the `STRATUM_RESULT` whose `message_id` is the authorize uid
+  (configure/subscribe return as their own result methods), mirroring the Pool A pattern.
 
 ## Build reference
 
