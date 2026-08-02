@@ -193,7 +193,7 @@ NerdQAxe `Config::getStratumPass()`; NerdMiner_v2 `Settings.PoolPassword` →
 
 ```
 Decentralized Dual Miners/
-  docs/specs/          this spec + implementation plan
+  docs/specs/                      this spec + implementation plan
   BitAxe-ESP-Miner/                modified ESP-Miner (bitaxeorg) full source
   NerdAxe-NerdQAxe-ESP-Miner/      modified NerdQAxe fork (builds NerdAxe + NerdQAxe)
   NerdMiner_v2/                    modified CPU miner full source

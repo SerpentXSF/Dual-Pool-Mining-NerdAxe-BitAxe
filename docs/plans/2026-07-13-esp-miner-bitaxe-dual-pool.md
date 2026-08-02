@@ -1,7 +1,5 @@
 # ESP-Miner (BitAxe) Dual-Pool Implementation Plan
 
-
-
 **Goal:** Add true simultaneous dual-pool mining (two permanently-connected Stratum
 sessions, weighted time-sliced onto the single ASIC, shares routed back to the
 originating pool), a per-pool custom Pool Password, and dedicated per-pool failover,
