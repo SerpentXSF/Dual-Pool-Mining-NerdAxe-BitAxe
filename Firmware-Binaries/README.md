@@ -14,9 +14,9 @@ built from this deliverable's `BitAxe-ESP-Miner/` source. Flash it at offset **`
 
 **SHA-256**
 ```
-esp-miner-factory.bin  880365f703149477982299678f7d5a69fab39294b11310601c8424934abbe845
+esp-miner-factory.bin  753e2e4de58a93a8a13238a3194c4b3c8c4b35c77311cc46cb4ee2900ba9bbbf
 esp-miner.bin          6cc641f48d6837fe194db3d9610969732f0b4698884618d6669beacfb48a53de
-www.bin                b349e3fe5d6ce1e026aba9307cd8f86910b5f41db043f6d74556b58574613d93
+www.bin                10a208adcf56f76e5f882e7a97fcd0901e1dc60e4cfea0b97155a78ca353f3d0
 ```
 
 **Build provenance**

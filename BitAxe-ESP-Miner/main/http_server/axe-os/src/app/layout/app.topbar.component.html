@@ -1,5 +1,5 @@
 <div class="layout-topbar">
-    <a routerLink="" class="text-color flex flex-column align-items-center" style="gap: 6px; line-height: 0; align-self: flex-start; margin-top: 6px;">
+    <a routerLink="" class="text-color flex flex-column align-items-center" style="gap: 4px;">
         <svg xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 213 96"
             width="90"
@@ -36,14 +36,12 @@
                 paint-order="stroke"
             >SERPENTX</text>
         </svg>
+        <span class="text-color-secondary select-none text-sm" style="line-height: 1;"
+            tooltipPosition="bottom" pTooltip="Hostname"
+        >{{ (info$ | async)?.hostname }}</span>
     </a>
 
     <ng-container *ngIf="info$ | async as info">
-        <span class="text-color-secondary select-none absolute bottom-0 mb-1 text-center" style="left: 2rem; width: 96px;"
-            tooltipPosition="bottom"
-            pTooltip="Hostname"
-        >{{info.hostname}}</span>
-
         <ul *ngIf="!isAPMode" class="flex ml-auto list-none p-0 m-0 gap-4 lg:flex-order-2">
             <li *ngIf="dashboardEdit.editMode$ | async" class="hidden md:block">
                 <a class="block py-2 text-color cursor-pointer"
