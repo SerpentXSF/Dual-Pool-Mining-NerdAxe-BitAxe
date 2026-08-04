@@ -1,9 +1,9 @@
 <div class="layout-topbar">
-    <a routerLink="" class="text-color flex flex-column align-items-start" style="gap: 2px; line-height: 0;">
+    <a routerLink="" class="text-color flex flex-column align-items-center" style="gap: 6px; line-height: 0; align-self: flex-start; margin-top: 6px;">
         <svg xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 213 96"
-            width="78"
-            height="35"
+            width="90"
+            height="41"
             class="block"
             role="img"
             aria-label="AxeOS"
@@ -39,7 +39,7 @@
     </a>
 
     <ng-container *ngIf="info$ | async as info">
-        <span class="text-color-secondary select-none absolute left-0 bottom-0 ml-6 md:ml-7 mb-1"
+        <span class="text-color-secondary select-none absolute bottom-0 mb-1 text-center" style="left: 2rem; width: 96px;"
             tooltipPosition="bottom"
             pTooltip="Hostname"
         >{{info.hostname}}</span>
