@@ -31,9 +31,10 @@ the BitAxe / NerdAxe / NerdQAxe device families.
 ### 1 · Flash
 
 - **Easiest — hosted [Web Flasher](https://serpentxsf.github.io/Dual-Pool-Mining-NerdAxe-BitAxe/)**
-  (Chrome/Edge, nothing to install): open the page, pick **BitAxe** or **NerdAxe**, plug the
-  miner in with a USB-C **data** cable, and click **Connect & Flash**. It flashes the factory
-  image straight from your browser.
+  (Chrome/Edge, nothing to install): open the page, pick your device — **BitAxe**,
+  **NerdAxe** (BM1366), or **NerdAxe Gamma** (BM1370) — plug the miner in with a USB-C
+  **data** cable, and click **Connect & Flash**. It flashes the factory image straight from
+  your browser.
 - **Offline / advanced — local USB flasher**: `cd Flasher && python serve.py`
   → opens `http://localhost:8000` in **Chrome/Edge**. Pick your device preset, select the
   factory bin from [Firmware-Binaries/](Firmware-Binaries/) (`…-factory….bin`, offset `0x0`),
@@ -53,10 +54,24 @@ the BitAxe / NerdAxe / NerdQAxe device families.
 
 ### 3 · Update over the air (OTA)
 
-| Device | OTA path |
-|--------|----------|
-| **BitAxe** | AxeOS → **System / Update**: upload **`esp-miner.bin`** (Firmware) *and* **`www.bin`** (Website) — do both (matched pair; firmware reboots). |
-| **NerdAxe / NerdQAxe** | NerdOS → **Settings → Release & Update → Install from GitHub** for official releases, or **USB flash** the factory bin for a custom build. |
+Already running this firmware? Update without a cable and keep your pool config. In the
+device's web UI, open the update page and upload **both** files for your device — the
+**firmware** app image *and* the **website** (`www.bin`).
+
+> **The update page checks the file name and rejects anything that doesn't match.**
+> Download the firmware file for your **exact model** and **do not rename it**. (This is a
+> safety guard — a NerdAxe Gamma won't accept the original NerdAxe image, and vice-versa.)
+> The files in [Firmware-Binaries/](Firmware-Binaries/) are already named to match.
+
+| Device | Where | Firmware file (upload as-is) | Website file |
+|--------|-------|------------------------------|--------------|
+| **BitAxe** | AxeOS → **System / Update** | `esp-miner.bin` | `www.bin` |
+| **NerdAxe** (BM1366) | web UI → **Settings** | `esp-miner-NerdAxe.bin` | `www.bin` |
+| **NerdAxe Gamma** (BM1370) | web UI → **Settings** | `esp-miner-NerdAxeGamma.bin` | `www.bin` |
+
+Upload **both** every time — the firmware and web UI are a matched pair (a mismatch triggers
+a version-mismatch warning in the UI). The device reboots after the firmware upload. The
+`esp-miner-factory-*.bin` images are for a **full USB / Web-Flasher** flash at `0x0`, *not* OTA.
 
 Prebuilt firmware, OTA files, and SHA-256 sums: [Firmware-Binaries/](Firmware-Binaries/).
 Full step-by-step with verification: [FLASHING_AND_VERIFICATION.md](FLASHING_AND_VERIFICATION.md).

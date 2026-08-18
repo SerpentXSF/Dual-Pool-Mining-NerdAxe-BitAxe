@@ -127,10 +127,16 @@
 
     <div class="note">
       <strong>Already running the firmware?</strong> You don't need this page. Update over the air instead:
-      open your device's web UI &rarr; firmware update, and upload the app + web UI (this keeps your config).
-      Grab those from
-      <a href="https://github.com/SerpentXSF/Dual-Pool-Mining-NerdAxe-BitAxe/tree/main/Firmware-Binaries">Firmware-Binaries</a>
-      (<code>esp-miner*.bin</code> = firmware, <code>www.bin</code> = web UI).
+      open your device's web UI &rarr; firmware update, and upload the firmware <em>and</em>
+      <code>www.bin</code> (this keeps your config). Get them from
+      <a href="https://github.com/SerpentXSF/Dual-Pool-Mining-NerdAxe-BitAxe/tree/main/Firmware-Binaries">Firmware-Binaries</a>:
+      <ul style="margin:8px 0 0;">
+        <li>BitAxe &rarr; <code>esp-miner.bin</code></li>
+        <li>NerdAxe (BM1366) &rarr; <code>esp-miner-NerdAxe.bin</code></li>
+        <li>NerdAxe Gamma (BM1370) &rarr; <code>esp-miner-NerdAxeGamma.bin</code></li>
+      </ul>
+      <span class="muted">The update page checks the file name &mdash; download the one for your model and
+      don't rename it.</span>
     </div>
 
     <h2>Prefer the command line?</h2>
