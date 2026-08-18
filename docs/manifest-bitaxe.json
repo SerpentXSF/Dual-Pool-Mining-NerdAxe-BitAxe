@@ -6,7 +6,7 @@
     {
       "chipFamily": "ESP32-S3",
       "parts": [
-        { "path": "https://raw.githubusercontent.com/SerpentXSF/Dual-Pool-Mining-NerdAxe-BitAxe/f58c1f48ccd6ce6f5349ae5ef6f6f6b425d8c16d/Firmware-Binaries/BitAxe/esp-miner-factory.bin", "offset": 0 }
+        { "path": "https://raw.githubusercontent.com/SerpentXSF/Dual-Pool-Mining-NerdAxe-BitAxe/678ca95b77c322d7e34a010be8b3e92ba9baeb3f/Firmware-Binaries/BitAxe/esp-miner-factory.bin", "offset": 0 }
       ]
     }
   ]
