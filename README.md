@@ -1,8 +1,12 @@
-# SerpentX Dual Pool Mining — NerdAxe, BitAxe & NerdQAxe
+# SerpentX Dual Pool Mining — BitAxe & NerdAxe
 
 Customized open-source ESP32 SHA-256 miner firmware adding **true simultaneous
 dual-pool mining**, a **custom Pool Password** field, and **per-pool failover** to
-the BitAxe / NerdAxe / NerdQAxe device families.
+the BitAxe and NerdAxe device families.
+
+> **Not NerdQAxe.** The NerdQAxe++ is a different device (4× BM1370) with its own
+> [NerdQAxe-Quad-Miner](https://github.com/SerpentXSF/NerdQAxe-Quad-Miner) repo and
+> native/4-pool dual mining — it is intentionally out of scope here.
 
 > **Maintaining this / taking upstream updates:** see [MAINTENANCE.md](MAINTENANCE.md).
 > **Flashing + per-device verification:** see [FLASHING_AND_VERIFICATION.md](FLASHING_AND_VERIFICATION.md).
@@ -32,7 +36,7 @@ the BitAxe / NerdAxe / NerdQAxe device families.
 > board profile (voltage domains, fan map, calibration) in NVS. OTA keeps it — and your
 > WiFi and tune. A **full flash wipes it**; our factory image re-provisions it, but OTA is
 > the cleaner, lower-risk path. Reserve the full flash below for a **fresh device or recovery**.
-> (NerdAxe/NerdQAxe use a compile-time board target, so full flash is fine for them.)
+> (NerdAxe uses a compile-time board target, so full flash is fine for it.)
 
 - **Fresh device / recovery — hosted [Web Flasher](https://serpentxsf.github.io/Dual-Pool-Mining-NerdAxe-BitAxe/)**
   (Chrome/Edge, nothing to install): open the page, pick your device — **BitAxe**,
@@ -54,7 +58,7 @@ the BitAxe / NerdAxe / NerdQAxe device families.
 | Device | Where | How |
 |--------|-------|-----|
 | **BitAxe** | Web UI → **Pool** settings → **"Dual Mining (Simultaneous Pool B)"** | Enable Dual Mining, set **Split Interval** (ms) + **Pool A Share %**, fill **Pool B** host/port/user/**Pool Password** (+ optional Pool B Failover). **Split Interval / Pool A Share % / Enable now apply live — no reboot; Pool B endpoint & credentials still need a Restart.** |
-| **NerdAxe / NerdQAxe** | Web UI → **Settings** | Set **Pool Mode = Dual**, adjust the **Pool Balance** slider, enter each pool's **Password**. Save → Restart. (Native — per-pool hashrate split shows on the dashboard.) |
+| **NerdAxe** | Web UI → **Settings** | Set **Pool Mode = Dual**, adjust the **Pool Balance** slider, enter each pool's **Password**. Save → Restart. (Native — per-pool hashrate split shows on the dashboard.) |
 
 ### 3 · Update over the air (OTA)
 
@@ -85,13 +89,14 @@ Full step-by-step with verification: [FLASHING_AND_VERIFICATION.md](FLASHING_AND
 | Device type | Folder                     | Base firmware                         | Status |
 |-------------|----------------------------|---------------------------------------|--------|
 | **BitAxe**  | `BitAxe-ESP-Miner/`        | ESP-Miner (bitaxeorg mainline, C)     | ✅ implemented + **prebuilt bin** in [Firmware-Binaries/](Firmware-Binaries/) |
-| **NerdAxe** | `NerdAxe-NerdQAxe-ESP-Miner/` | ESP-Miner-NerdQAxePlus fork, `BOARD=NERDAXE` | ✅ native + **prebuilt bin** in [Firmware-Binaries/](Firmware-Binaries/) |
-| **NerdQAxe**| `NerdAxe-NerdQAxe-ESP-Miner/` | ESP-Miner-NerdQAxePlus fork, `BOARD=NERDQAXEPLUS` | ✅ native + **prebuilt bin** in [Firmware-Binaries/](Firmware-Binaries/) |
+| **NerdAxe** | `NerdAxe-ESP-Miner/` | ESP-Miner-NerdQAxePlus fork, `BOARD=NERDAXE` | ✅ native + **prebuilt bin** in [Firmware-Binaries/](Firmware-Binaries/) |
 
-The NerdAxe and NerdQAxe builds both come from the shufps NerdQAxe fork, which
-**already implements dual-pool mining (Pool Mode = Dual + Pool Balance slider) and
-per-pool custom passwords natively** — no code changes were required. See
-[NerdAxe-NerdQAxe-ESP-Miner/DUAL_MINING_NOTES.md](NerdAxe-NerdQAxe-ESP-Miner/DUAL_MINING_NOTES.md).
+The NerdAxe build comes from the shufps NerdQAxePlus fork, which **already implements
+dual-pool mining (Pool Mode = Dual + Pool Balance slider) and per-pool custom passwords
+natively** — no code changes were required. See
+[NerdAxe-ESP-Miner/DUAL_MINING_NOTES.md](NerdAxe-ESP-Miner/DUAL_MINING_NOTES.md).
+(That fork can also target NerdQAxe boards, but the NerdQAxe++ is out of scope here — it
+has its own [NerdQAxe-Quad-Miner](https://github.com/SerpentXSF/NerdQAxe-Quad-Miner) repo.)
 
 ## How dual mining works (BitAxe implementation)
 

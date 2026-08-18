@@ -189,7 +189,7 @@ NerdQAxe `Config::getStratumPass()`). Work reduces to:
 Decentralized Dual Miners/
   docs/specs/                      this spec + implementation plan
   BitAxe-ESP-Miner/                modified ESP-Miner (bitaxeorg) full source
-  NerdAxe-NerdQAxe-ESP-Miner/      modified NerdQAxe fork (builds NerdAxe + NerdQAxe)
+  NerdAxe-ESP-Miner/      modified NerdQAxe fork (builds NerdAxe + NerdQAxe)
   README.md                        new fields, split model, build steps per device,
                                    SHA-256d + hashrate-split caveat
 ```

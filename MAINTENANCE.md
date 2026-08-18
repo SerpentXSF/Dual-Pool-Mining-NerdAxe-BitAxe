@@ -8,9 +8,9 @@ pulling upstream releases and re-applying our features cleanly. This doc is the 
 | Firmware | Custom code? | Notes |
 |----------|--------------|-------|
 | **BitAxe** (`BitAxe-ESP-Miner/`, bitaxeorg/ESP-Miner) | **Yes** — the only real code | Pool B parallel pipeline |
-| **NerdAxe / NerdQAxe** (`NerdAxe-NerdQAxe-ESP-Miner/`, shufps fork) | **No** — dual-pool + password are native upstream | Re-vendor = just drop in the new release |
+| **NerdAxe** (`NerdAxe-ESP-Miner/`, shufps fork) | **No** — dual-pool + password are native upstream | Re-vendor = just drop in the new release |
 
-So **only BitAxe needs merge work.** NerdAxe/NerdQAxe updates are a straight
+So **only BitAxe needs merge work.** NerdAxe updates are a straight
 file swap.
 
 ### BitAxe custom footprint
@@ -121,6 +121,6 @@ ultimate maintenance strategy.
 
 - BitAxe: `espressif/idf:v5.5.3` (Docker), `GITHUB_ACTIONS=true idf.py build` with the web
   UI prebuilt (`npm ci && npm run build` in `main/http_server/axe-os`), then `merge_bin.sh`.
-- NerdAxe/NerdQAxe: `shufps/esp-idf-builder:0.0.1`, `BOARD=NERDAXE` / `NERDQAXEPLUS`,
+- NerdAxe: `shufps/esp-idf-builder:0.0.1`, `BOARD=NERDAXE`,
   `idf.py build`, then esptool `merge_bin`.
 - Host tests: `cd BitAxe-ESP-Miner/components/dual_pool/test_host && make run`.

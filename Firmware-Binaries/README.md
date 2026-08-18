@@ -56,7 +56,7 @@ Then configure dual mining in the web UI (see `../FLASHING_AND_VERIFICATION.md`)
 
 ## NerdAxe — prebuilt here too ✅
 
-Built from `NerdAxe-NerdQAxe-ESP-Miner/` (unmodified fork; dual-pool + password are
+Built from `NerdAxe-ESP-Miner/` (unmodified fork; dual-pool + password are
 native). Flash the factory bin at offset **`0x0`**.
 
 | File | Device | How to apply |
@@ -83,7 +83,7 @@ esp-miner-factory-nerdaxe.bin        a53bb91411e7bddf98f54919816fc304101d0227ee8
 `BOARD=NERDAXE`, secp256k1 submodule @ `0cdc758`. Each build
 compiled the firmware **and** its Angular web UI. After flashing, enable dual mining
 in the UI (**Pool Mode = Dual** + **Pool Balance** slider) — see
-`../NerdAxe-NerdQAxe-ESP-Miner/DUAL_MINING_NOTES.md`.
+`../NerdAxe-ESP-Miner/DUAL_MINING_NOTES.md`.
 
 > Need another board variant (NERDQAXEPLUS2, NERDOCTAXE, gamma, etc.)? The official
 > releases cover them: https://github.com/shufps/ESP-Miner-NerdQAxePlus/releases

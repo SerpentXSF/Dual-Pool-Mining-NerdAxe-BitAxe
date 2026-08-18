@@ -57,15 +57,14 @@ field for each firmware in this deliverable. Two flashing routes are given:
 
 ---
 
-## Device 2 — NerdAxe & NerdQAxe (ESP-Miner-NerdQAxePlus fork)
+## Device 2 — NerdAxe (ESP-Miner-NerdQAxePlus fork)
 
 Dual-pool + per-pool passwords are **native** here (no code changes). See
-[NerdAxe-NerdQAxe-ESP-Miner/DUAL_MINING_NOTES.md](NerdAxe-NerdQAxe-ESP-Miner/DUAL_MINING_NOTES.md).
+[NerdAxe-ESP-Miner/DUAL_MINING_NOTES.md](NerdAxe-ESP-Miner/DUAL_MINING_NOTES.md).
 
 ### Build (board selected by env var)
-- [ ] `cd NerdAxe-NerdQAxe-ESP-Miner`
-- [ ] NerdAxe: `export BOARD=NERDAXE`  •  NerdQAxe: `export BOARD=NERDQAXEPLUS`
-      (or `NERDQAXEPLUS2` for the ++). Windows PowerShell: `$env:BOARD="NERDAXE"`.
+- [ ] `cd NerdAxe-ESP-Miner`
+- [ ] `export BOARD=NERDAXE` (Windows PowerShell: `$env:BOARD="NERDAXE"`).
 - [ ] `idf.py build`
 - [ ] Note the factory/merged bin path (flash at `0x0`).
 
@@ -74,7 +73,7 @@ Dual-pool + per-pool passwords are **native** here (no code changes). See
 
 ### Flash — B) Web flasher
 - [ ] `cd "Local Flasher" && python serve.py`
-- [ ] Preset **NerdAxe / NerdQAxe (ESP32-S3, factory @0x0)** → select bin → **Connect & Flash**.
+- [ ] Preset **NerdAxe (ESP32-S3, factory @0x0)** → select bin → **Connect & Flash**.
 
 ### Config & verify
 - [ ] Web UI → **Settings**: set **Pool Mode = Dual**.
@@ -90,7 +89,7 @@ Dual-pool + per-pool passwords are **native** here (no code changes). See
 
 | Firmware | Image | Offset |
 |----------|-------|--------|
-| BitAxe / NerdAxe / NerdQAxe | `*-factory-*.bin` (merged) | `0x0` |
+| BitAxe / NerdAxe | `*-factory-*.bin` (merged) | `0x0` |
 | ESP-IDF split images | bootloader / partitions / app | `0x0` / `0x8000` / `0x10000` |
 
 If a flash fails to start, hold **BOOT**, tap **RESET**, release **BOOT** to enter

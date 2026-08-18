@@ -40,7 +40,7 @@ You build them (this environment can't):
 | Device | Build | Image to select |
 |--------|-------|-----------------|
 | BitAxe | `cd ../BitAxe-ESP-Miner && idf.py build` | `build/esp-miner-factory-*.bin` @ `0x0` |
-| NerdAxe | `cd ../NerdAxe-NerdQAxe-ESP-Miner && BOARD=NERDAXE idf.py build` | factory/merged bin @ `0x0` |
+| NerdAxe | `cd ../NerdAxe-ESP-Miner && BOARD=NERDAXE idf.py build` | factory/merged bin @ `0x0` |
 | NerdQAxe | `… BOARD=NERDQAXEPLUS idf.py build` | factory/merged bin @ `0x0` |
 
 Full step-by-step (with post-flash dual-mining verification) is in
