@@ -3,8 +3,8 @@ main,namespace,,
 boardversion,data,string,601
 devicemodel,data,string,gamma
 asicmodel,data,string,BM1370
-asicfrequency,data,u16,475
-asicvoltage,data,u16,1120
+asicfrequency,data,u16,425
+asicvoltage,data,u16,1050
 autofanspeed,data,u16,0
 fanspeed,data,u16,100
 overheat_mode,data,u16,1
