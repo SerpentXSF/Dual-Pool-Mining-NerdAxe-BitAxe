@@ -30,11 +30,18 @@ the BitAxe / NerdAxe / NerdQAxe device families.
 
 ### 1 · Flash
 
-- **First time / recovery — USB flasher** (no toolchain): `cd Flasher && python serve.py`
+- **Easiest — hosted [Web Flasher](https://serpentxsf.github.io/Dual-Pool-Mining-NerdAxe-BitAxe/)**
+  (Chrome/Edge, nothing to install): open the page, pick **BitAxe** or **NerdAxe**, plug the
+  miner in with a USB-C **data** cable, and click **Connect & Flash**. It flashes the factory
+  image straight from your browser.
+- **Offline / advanced — local USB flasher**: `cd Flasher && python serve.py`
   → opens `http://localhost:8000` in **Chrome/Edge**. Pick your device preset, select the
   factory bin from [Firmware-Binaries/](Firmware-Binaries/) (`…-factory….bin`, offset `0x0`),
   **Connect & Flash**. If a flash fails, hold **BOOT**, tap **RESET**, release **BOOT**.
 - **Already running the stock firmware? Update over the air instead** — see step 3.
+
+> A full flash wipes WiFi — the miner comes back in **setup-AP mode** (`Bitaxe_xxxx` /
+> `NerdAxe_xxxx`), not at its old IP. That's expected; rejoin the setup AP to reconnect it. OTA keeps your config.
 
 ### 2 · Configure dual mining + Pool Password
 
