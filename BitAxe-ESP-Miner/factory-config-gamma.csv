@@ -1,0 +1,10 @@
+key,type,encoding,value
+main,namespace,,
+boardversion,data,string,601
+devicemodel,data,string,gamma
+asicmodel,data,string,BM1370
+asicfrequency,data,u16,485
+asicvoltage,data,u16,1150
+autofanspeed,data,u16,1
+fanspeed,data,u16,100
+overheat_mode,data,u16,1
