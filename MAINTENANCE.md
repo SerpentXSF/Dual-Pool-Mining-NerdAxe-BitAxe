@@ -9,9 +9,8 @@ pulling upstream releases and re-applying our features cleanly. This doc is the 
 |----------|--------------|-------|
 | **BitAxe** (`BitAxe-ESP-Miner/`, bitaxeorg/ESP-Miner) | **Yes** — the only real code | Pool B parallel pipeline |
 | **NerdAxe / NerdQAxe** (`NerdAxe-NerdQAxe-ESP-Miner/`, shufps fork) | **No** — dual-pool + password are native upstream | Re-vendor = just drop in the new release |
-| **NerdMiner_v2** | **No** — password native; dual-pool out of scope | Re-vendor as-is |
 
-So **only BitAxe needs merge work.** NerdAxe/NerdQAxe/NerdMiner updates are a straight
+So **only BitAxe needs merge work.** NerdAxe/NerdQAxe updates are a straight
 file swap.
 
 ### BitAxe custom footprint

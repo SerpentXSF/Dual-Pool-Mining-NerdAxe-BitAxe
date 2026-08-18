@@ -50,7 +50,6 @@ the BitAxe / NerdAxe / NerdQAxe device families.
 |--------|-------|-----|
 | **BitAxe** | Web UI → **Pool** settings → **"Dual Mining (Simultaneous Pool B)"** | Enable Dual Mining, set **Split Interval** (ms) + **Pool A Share %**, fill **Pool B** host/port/user/**Pool Password** (+ optional Pool B Failover). **Split Interval / Pool A Share % / Enable now apply live — no reboot; Pool B endpoint & credentials still need a Restart.** |
 | **NerdAxe / NerdQAxe** | Web UI → **Settings** | Set **Pool Mode = Dual**, adjust the **Pool Balance** slider, enter each pool's **Password**. Save → Restart. (Native — per-pool hashrate split shows on the dashboard.) |
-| **NerdMiner_v2** | Wi-Fi config portal | Fill the **Pool password** field (dual-pool not applicable). |
 
 ### 3 · Update over the air (OTA)
 
@@ -83,16 +82,11 @@ Full step-by-step with verification: [FLASHING_AND_VERIFICATION.md](FLASHING_AND
 | **BitAxe**  | `BitAxe-ESP-Miner/`        | ESP-Miner (bitaxeorg mainline, C)     | ✅ implemented + **prebuilt bin** in [Firmware-Binaries/](Firmware-Binaries/) |
 | **NerdAxe** | `NerdAxe-NerdQAxe-ESP-Miner/` | ESP-Miner-NerdQAxePlus fork, `BOARD=NERDAXE` | ✅ native + **prebuilt bin** in [Firmware-Binaries/](Firmware-Binaries/) |
 | **NerdQAxe**| `NerdAxe-NerdQAxe-ESP-Miner/` | ESP-Miner-NerdQAxePlus fork, `BOARD=NERDQAXEPLUS` | ✅ native + **prebuilt bin** in [Firmware-Binaries/](Firmware-Binaries/) |
-| (CPU miner) | `NerdMiner_v2/`            | BitMaker-hub NerdMiner_v2 (Arduino)   | ✅ password native; dual-pool out of scope (lottery miner) |
 
 The NerdAxe and NerdQAxe builds both come from the shufps NerdQAxe fork, which
 **already implements dual-pool mining (Pool Mode = Dual + Pool Balance slider) and
 per-pool custom passwords natively** — no code changes were required. See
 [NerdAxe-NerdQAxe-ESP-Miner/DUAL_MINING_NOTES.md](NerdAxe-NerdQAxe-ESP-Miner/DUAL_MINING_NOTES.md).
-NerdMiner_v2 is the CPU "lottery" miner; its Pool Password is already supported
-natively, and dual-pool mining is intentionally out of scope there (splitting a
-few-KH/s lottery hashrate has no practical benefit). See
-[NerdMiner_v2/DUAL_MINING_NOTES.md](NerdMiner_v2/DUAL_MINING_NOTES.md).
 
 ## How dual mining works (BitAxe implementation)
 

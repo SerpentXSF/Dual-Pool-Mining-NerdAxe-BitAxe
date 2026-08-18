@@ -86,35 +86,12 @@ Dual-pool + per-pool passwords are **native** here (no code changes). See
 
 ---
 
-## Device 3 — NerdMiner_v2 (CPU lottery miner)
-
-Pool Password is **native**; dual-pool is out of scope (see
-[NerdMiner_v2/DUAL_MINING_NOTES.md](NerdMiner_v2/DUAL_MINING_NOTES.md)).
-
-### Build & flash (PlatformIO)
-- [ ] `cd NerdMiner_v2`
-- [ ] Pick your board's env in `platformio.ini`.
-- [ ] `pio run -e <env>` then `pio run -e <env> -t upload` (CLI route).
-- [ ] Web-flasher route: build produces a bin under `.pio/build/<env>/` — in the
-      **Flasher**, use preset **NerdMiner_v2 (Custom / verify offset)** and select that bin.
-      (NerdMiner_v2 images are typically flashed at `0x0` when merged; if you only have
-      `firmware.bin` use `0x10000` + bootloader `0x0` + partitions `0x8000`.)
-
-### Config & verify
-- [ ] Join the NerdMiner Wi-Fi config portal.
-- [ ] Set Wi-Fi + **Pool** (address/port/wallet) and the **Pool password** field.
-- [ ] Save; device reboots and connects; serial log shows `mining.authorize` with your
-      password and incoming `mining.notify` jobs.
-
----
-
 ## Quick reference — flash offsets
 
 | Firmware | Image | Offset |
 |----------|-------|--------|
 | BitAxe / NerdAxe / NerdQAxe | `*-factory-*.bin` (merged) | `0x0` |
 | ESP-IDF split images | bootloader / partitions / app | `0x0` / `0x8000` / `0x10000` |
-| NerdMiner_v2 merged | firmware merged bin | `0x0` |
 
 If a flash fails to start, hold **BOOT**, tap **RESET**, release **BOOT** to enter
 download mode, then retry.
