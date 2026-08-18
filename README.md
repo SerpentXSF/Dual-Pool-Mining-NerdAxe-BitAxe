@@ -28,18 +28,23 @@ the BitAxe / NerdAxe / NerdQAxe device families.
 
 ## Quick start
 
-### 1 · Flash
+> **BitAxe already running AxeOS? Use OTA (step 3), not a full flash.** AxeOS stores the
+> board profile (voltage domains, fan map, calibration) in NVS. OTA keeps it — and your
+> WiFi and tune. A **full flash wipes it**; our factory image re-provisions it, but OTA is
+> the cleaner, lower-risk path. Reserve the full flash below for a **fresh device or recovery**.
+> (NerdAxe/NerdQAxe use a compile-time board target, so full flash is fine for them.)
 
-- **Easiest — hosted [Web Flasher](https://serpentxsf.github.io/Dual-Pool-Mining-NerdAxe-BitAxe/)**
+- **Fresh device / recovery — hosted [Web Flasher](https://serpentxsf.github.io/Dual-Pool-Mining-NerdAxe-BitAxe/)**
   (Chrome/Edge, nothing to install): open the page, pick your device — **BitAxe**,
   **NerdAxe** (BM1366), or **NerdAxe Gamma** (BM1370) — plug the miner in with a USB-C
   **data** cable, and click **Connect & Flash**. It flashes the factory image straight from
-  your browser.
+  your browser. *(Re-flashing after we ship an update? Hard-refresh the page — Ctrl+Shift+R —
+  so it fetches the latest manifest; the firmware itself is pinned by commit and never stale.)*
 - **Offline / advanced — local USB flasher**: `cd "Local Flasher" && python serve.py`
   → opens `http://localhost:8000` in **Chrome/Edge**. Pick your device preset, select the
   factory bin from [Firmware-Binaries/](Firmware-Binaries/) (`…-factory….bin`, offset `0x0`),
   **Connect & Flash**. If a flash fails, hold **BOOT**, tap **RESET**, release **BOOT**.
-- **Already running the stock firmware? Update over the air instead** — see step 3.
+- **Already running the firmware (any BitAxe/AxeOS build)? Update over the air** — see step 3 (recommended).
 
 > A full flash wipes WiFi — the miner comes back in **setup-AP mode** (`Bitaxe_xxxx` /
 > `NerdAxe_xxxx`), not at its old IP. That's expected; rejoin the setup AP to reconnect it. OTA keeps your config.
