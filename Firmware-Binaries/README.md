@@ -54,7 +54,7 @@ www.bin                8e87dd8768cd9804c60b5b7af7514fc3cbb3b92ded0eebabe490816b2
 
 Then configure dual mining in the web UI (see `../FLASHING_AND_VERIFICATION.md`).
 
-## NerdAxe & NerdQAxe — prebuilt here too ✅
+## NerdAxe — prebuilt here too ✅
 
 Built from `NerdAxe-NerdQAxe-ESP-Miner/` (unmodified fork; dual-pool + password are
 native). Flash the factory bin at offset **`0x0`**.
@@ -64,8 +64,6 @@ native). Flash the factory bin at offset **`0x0`**.
 | `NerdAxe/esp-miner-factory-nerdaxe.bin` | NerdAxe | USB flash @ `0x0` (one-time bootstrap) |
 | `NerdAxe/esp-miner-nerdaxe.bin` | NerdAxe | **OTA firmware** — Settings → Manual Update → Firmware |
 | `NerdAxe/www.bin` | NerdAxe | **OTA web UI** — Settings → Manual Update → Web UI |
-| `NerdQAxe/esp-miner-factory-nerdqaxeplus.bin` | NerdQAxe+ | USB flash @ `0x0` |
-| `NerdQAxe/esp-miner-ota-nerdqaxeplus.bin` | NerdQAxe+ | OTA app bin |
 
 ### OTA workflow (NerdAxe)
 This build adds a **Manual Update (upload .bin)** section under **Settings → Release &
@@ -79,11 +77,10 @@ optional — uploads work without it.
 **SHA-256 (factory)**
 ```
 esp-miner-factory-nerdaxe.bin        a53bb91411e7bddf98f54919816fc304101d0227ee8d69593be2935175f0f5a0
-esp-miner-factory-nerdqaxeplus.bin   e80fd8260d2985e17fbdd8e71ac39fa6332c824ed4e9700ccc2bba731ea64cdd
 ```
 
 **Build provenance:** `shufps/esp-idf-builder:0.0.1` (ESP-IDF v5.3.3 + Node 20),
-`BOARD=NERDAXE` / `BOARD=NERDQAXEPLUS`, secp256k1 submodule @ `0cdc758`. Each build
+`BOARD=NERDAXE`, secp256k1 submodule @ `0cdc758`. Each build
 compiled the firmware **and** its Angular web UI. After flashing, enable dual mining
 in the UI (**Pool Mode = Dual** + **Pool Balance** slider) — see
 `../NerdAxe-NerdQAxe-ESP-Miner/DUAL_MINING_NOTES.md`.
