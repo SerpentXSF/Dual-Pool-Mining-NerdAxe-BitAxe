@@ -35,7 +35,7 @@ the BitAxe / NerdAxe / NerdQAxe device families.
   **NerdAxe** (BM1366), or **NerdAxe Gamma** (BM1370) — plug the miner in with a USB-C
   **data** cable, and click **Connect & Flash**. It flashes the factory image straight from
   your browser.
-- **Offline / advanced — local USB flasher**: `cd Flasher && python serve.py`
+- **Offline / advanced — local USB flasher**: `cd "Local Flasher" && python serve.py`
   → opens `http://localhost:8000` in **Chrome/Edge**. Pick your device preset, select the
   factory bin from [Firmware-Binaries/](Firmware-Binaries/) (`…-factory….bin`, offset `0x0`),
   **Connect & Flash**. If a flash fails, hold **BOOT**, tap **RESET**, release **BOOT**.

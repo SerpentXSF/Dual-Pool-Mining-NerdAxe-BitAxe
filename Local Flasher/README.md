@@ -10,7 +10,7 @@ Everything runs on your machine; no firmware or data is uploaded anywhere.
 ## Run it
 
 ```bash
-cd Flasher
+cd "Local Flasher"
 python serve.py        # opens http://localhost:8000/index.html
 ```
 Windows: double-click **`serve.bat`**.

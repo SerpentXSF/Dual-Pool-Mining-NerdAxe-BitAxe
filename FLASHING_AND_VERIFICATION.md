@@ -3,7 +3,7 @@
 Per-device steps to build, flash, and verify dual-pool mining + the pool-password
 field for each firmware in this deliverable. Two flashing routes are given:
 **A) CLI** (`idf.py` / `esptool` / `pio`) and **B) the local web flasher** in
-[`Flasher/`](Flasher/) (USB, Chrome/Edge, no toolchain needed once you have a `.bin`).
+[`Local Flasher/`](Local%20Flasher/) (USB, Chrome/Edge, no toolchain needed once you have a `.bin`).
 
 > Connection: use the device's **USB (USB-JTAG/serial)** port. On first connect,
 > install the USB-serial driver if the port doesn't appear (ESP32-S3 native USB
@@ -27,7 +27,7 @@ field for each firmware in this deliverable. Two flashing routes are given:
 - [ ] `idf.py -p <PORT> flash monitor`  (or `esptool.py -p <PORT> write_flash 0x0 build/esp-miner-factory-*.bin`)
 
 ### Flash — B) Web flasher
-- [ ] Start it: `cd Flasher && python serve.py` → opens `http://localhost:8000`.
+- [ ] Start it: `cd "Local Flasher" && python serve.py` → opens `http://localhost:8000`.
 - [ ] Pick device preset **BitAxe (ESP32-S3, factory @0x0)**.
 - [ ] Select your `esp-miner-factory-*.bin`, click **Connect & Flash**, pick the port.
 
@@ -73,7 +73,7 @@ Dual-pool + per-pool passwords are **native** here (no code changes). See
 - [ ] `idf.py -p <PORT> flash monitor`
 
 ### Flash — B) Web flasher
-- [ ] `cd Flasher && python serve.py`
+- [ ] `cd "Local Flasher" && python serve.py`
 - [ ] Preset **NerdAxe / NerdQAxe (ESP32-S3, factory @0x0)** → select bin → **Connect & Flash**.
 
 ### Config & verify
