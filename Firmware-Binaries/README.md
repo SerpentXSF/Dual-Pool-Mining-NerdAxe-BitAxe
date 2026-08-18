@@ -91,8 +91,3 @@ in the UI (**Pool Mode = Dual** + **Pool Balance** slider) — see
 > Need another board variant (NERDQAXEPLUS2, NERDOCTAXE, gamma, etc.)? The official
 > releases cover them: https://github.com/shufps/ESP-Miner-NerdQAxePlus/releases
 > — or ask and I'll build that `BOARD=` from source.
-
-## NerdMiner_v2 — official prebuilt bins
-
-Unmodified (password native, dual-pool out of scope). Use the official release for
-your board: https://github.com/BitMaker-hub/NerdMiner_v2/releases

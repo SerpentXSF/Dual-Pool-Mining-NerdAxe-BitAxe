@@ -7,10 +7,3 @@ dist/
 .vscode/
 *.o
 test_dual_pool
-
-# NerdMiner_v2 heavy non-source dirs (kept on disk, excluded from git)
-NerdMiner_v2/bin/
-NerdMiner_v2/SLS/
-NerdMiner_v2/3d_files/
-NerdMiner_v2/images/
-NerdMiner_v2/.pio/

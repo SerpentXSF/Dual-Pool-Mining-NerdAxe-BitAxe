@@ -1221,5 +1221,5 @@ git commit -m "docs: BitAxe dual-miner deliverable + README"
 - **Type consistency:** `pool_id_t {POOL_A,POOL_B}` used in mining.h(uint8_t), scheduler,
   create_jobs, asic_result; `pool_failover_endpoint` returns int 0/1/-1 consistently;
   NVS `rest_name`s match between B2 and F1.
-- **Known follow-ups for the sibling plans:** NerdQAxe fork (Config class + v2 http),
-  NerdMiner_v2 (Arduino, real CPU-thread split). Separate plans.
+- **Known follow-ups for the sibling plans:** NerdQAxe fork (Config class + v2 http).
+  Separate plans.

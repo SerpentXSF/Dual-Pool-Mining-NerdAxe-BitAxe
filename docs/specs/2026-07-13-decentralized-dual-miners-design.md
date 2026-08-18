@@ -26,13 +26,10 @@ Final builds must target three device types: **NerdAxe**, **BitAxe**, **NerdQAxe
 | BitAxe      | ESP-Miner (bitaxeorg mainline)         | ESP-IDF / C  | runtime `board_version` / `config-*.cvs` |
 | NerdAxe     | ESP-Miner-NerdQAxePlus (shufps fork)   | ESP-IDF / C++| build target `nerdaxe`     |
 | NerdQAxe    | ESP-Miner-NerdQAxePlus (shufps fork)   | ESP-IDF / C++| build target `nerdqaxeplus` / `nerdqaxeplus2` |
-| (CPU miner) | NerdMiner_v2 (BitMaker-hub)            | Arduino/PIO  | PlatformIO env per board   |
 
 The NerdQAxe fork contains dedicated board files for **both** NerdAxe
 (`main/boards/nerdaxe.cpp`) and NerdQAxe (`main/boards/nerdqaxeplus.cpp`), so it
-produces the NerdAxe and NerdQAxe device builds. NerdMiner_v2 is the CPU
-"lottery" miner line (included because it was explicitly selected); it is not one
-of the three ASIC device types but receives the same two features.
+produces the NerdAxe and NerdQAxe device builds.
 
 ## 3. Hardware reality (non-negotiable constraints)
 
@@ -103,8 +100,6 @@ extranonce/difficulty context.
 - **ESP-Miner / NerdQAxe:** `bm_job` gains a `pool_id`; the existing
   `active_jobs[128]` job table (indexed by ASIC job id) already lets the result
   task recover the originating job → its pool. Submit via `pool_id`'s transport.
-- **NerdMiner_v2:** the work item gains a pool tag; the found share is written to
-  the matching `WiFiClient`.
 
 ### 4.5 Per-pool failover state machine (Dual Pool Failover)
 Each `PoolContext` runs an independent connection state machine over its two
@@ -156,10 +151,9 @@ new `poolBFb*` block above. This gives dedicated, independent failover per pool.
 
 ## 6. Pool Password (requirement #2)
 
-All three firmwares already read a pool password from NVS and pass it to
+Both firmwares already read a pool password from NVS and pass it to
 `mining.authorize` (ESP-Miner `NVS_CONFIG_STRATUM_PASS` → `stratum_v1_task.c`;
-NerdQAxe `Config::getStratumPass()`; NerdMiner_v2 `Settings.PoolPassword` →
-`tx_mining_auth`). Work reduces to:
+NerdQAxe `Config::getStratumPass()`). Work reduces to:
 - Verify each authorize path uses the stored value (no residual hardcoded `"x"`).
 - Ensure a clearly-labeled **"Pool Password"** field is exposed in each config
   portal for **Pool A** and the new **Pool B**.
@@ -185,7 +179,7 @@ NerdQAxe `Config::getStratumPass()`; NerdMiner_v2 `Settings.PoolPassword` →
   with the correct extranonce/difficulty context.
 - **NVS:** save/load round-trip of all new keys and defaults.
 - **Build:** each firmware compiles under its toolchain — ESP-IDF build for
-  ESP-Miner and NerdQAxe fork (per board target), PlatformIO build for NerdMiner_v2.
+  ESP-Miner and the NerdQAxe fork (per board target).
 - **Behavioral:** dual-off diff == stock; dual-on against two test Stratum
   endpoints shows accepted shares on both pools in the configured ratio.
 
@@ -196,7 +190,6 @@ Decentralized Dual Miners/
   docs/specs/                      this spec + implementation plan
   BitAxe-ESP-Miner/                modified ESP-Miner (bitaxeorg) full source
   NerdAxe-NerdQAxe-ESP-Miner/      modified NerdQAxe fork (builds NerdAxe + NerdQAxe)
-  NerdMiner_v2/                    modified CPU miner full source
   README.md                        new fields, split model, build steps per device,
                                    SHA-256d + hashrate-split caveat
 ```
@@ -205,8 +198,7 @@ Decentralized Dual Miners/
 
 - Non-SHA-256 algorithms — the ASIC silicon physically implements only double
   SHA-256; Scrypt/Ethash/RandomX/etc. are impossible on these chips regardless of
-  firmware. (NerdMiner_v2's CPU path could run other algos in software but only at
-  novelty/lottery speed; not in scope.)
+  firmware.
 - Increasing total hashrate (physically impossible on one ASIC).
 - Web dashboard redesign beyond adding the new fields and per-pool share counts.
 
