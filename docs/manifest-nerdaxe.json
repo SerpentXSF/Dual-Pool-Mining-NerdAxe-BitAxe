@@ -1,0 +1,13 @@
+{
+  "name": "NerdAxe Dual-Pool",
+  "version": "dual-pool",
+  "new_install_prompt_erase": true,
+  "builds": [
+    {
+      "chipFamily": "ESP32-S3",
+      "parts": [
+        { "path": "https://raw.githubusercontent.com/SerpentXSF/Dual-Pool-Mining-NerdAxe-BitAxe/main/Firmware-Binaries/NerdAxe/esp-miner-factory-nerdaxe.bin", "offset": 0 }
+      ]
+    }
+  ]
+}

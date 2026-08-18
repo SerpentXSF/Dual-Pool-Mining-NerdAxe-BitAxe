@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Decentralized Dual Miners - Web Flasher</title>
+  <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: #0f1420;
+      color: #e6ecf7;
+      line-height: 1.55;
+    }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 40px 20px 64px; }
+    h1 { font-size: 1.9rem; margin: 0 0 4px; }
+    h2 { font-size: 1.15rem; margin: 34px 0 8px; color: #aab6d4; }
+    .sub { color: #93a1bd; margin: 0 0 28px; }
+    .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } }
+    .card {
+      background: #171e2e;
+      border: 1px solid #2a3550;
+      border-radius: 12px;
+      padding: 22px;
+      text-align: center;
+    }
+    .card h3 { margin: 0 0 4px; font-size: 1.15rem; }
+    .card .chip { color: #93a1bd; font-size: 0.85rem; margin: 0 0 16px; }
+    .card .what { color: #aab6d4; font-size: 0.82rem; margin: 14px 0 0; }
+    esp-web-install-button { --esp-tools-button-color: #4c8dff; }
+    button.activate {
+      cursor: pointer; border: none; border-radius: 8px; padding: 11px 20px;
+      font-size: 0.95rem; font-weight: 600; color: #fff; background: #4c8dff;
+    }
+    a { color: #6ea8ff; }
+    code {
+      background: #0a0e17; border: 1px solid #2a3550; border-radius: 6px;
+      padding: 1px 6px; font-size: 0.92em;
+    }
+    pre {
+      background: #0a0e17; border: 1px solid #2a3550; border-radius: 8px;
+      padding: 12px 14px; overflow-x: auto;
+    }
+    ul { padding-left: 20px; }
+    .note {
+      border-left: 3px solid #4c8dff; background: #141b2b;
+      padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 16px 0;
+    }
+    .warn { border-left-color: #ffb020; background: #201d13; }
+    .muted { color: #7f8db0; font-size: 0.9rem; }
+    .unsupported { display: none; color: #ff9aa2; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Decentralized Dual Miners</h1>
+    <p class="sub">Flash a <strong>BitAxe</strong> or <strong>NerdAxe</strong> with our dual-pool
+      firmware straight from your browser &mdash; mine two pools at once. Open source, no tools to install.</p>
+
+    <div class="cards">
+      <div class="card">
+        <h3>BitAxe</h3>
+        <p class="chip">Bitaxe Gamma &middot; BM1370 &middot; ESP32-S3</p>
+        <esp-web-install-button manifest="./manifest-bitaxe.json">
+          <button class="activate" slot="activate">Connect &amp; Flash</button>
+          <span slot="unsupported" class="unsupported">Use Chrome or Edge on desktop.</span>
+          <span slot="not-allowed" class="unsupported">Needs an https page + serial permission.</span>
+        </esp-web-install-button>
+        <p class="what">Flashes the <code>SerpentX-DualPool</code> factory image.</p>
+      </div>
+
+      <div class="card">
+        <h3>NerdAxe</h3>
+        <p class="chip">NerdAxe / NerdAxe Gamma &middot; BM1370 &middot; ESP32-S3</p>
+        <esp-web-install-button manifest="./manifest-nerdaxe.json">
+          <button class="activate" slot="activate">Connect &amp; Flash</button>
+          <span slot="unsupported" class="unsupported">Use Chrome or Edge on desktop.</span>
+          <span slot="not-allowed" class="unsupported">Needs an https page + serial permission.</span>
+        </esp-web-install-button>
+        <p class="what">Flashes the dual-pool factory image (ESP-Miner fork).</p>
+      </div>
+    </div>
+
+    <p class="muted" style="margin-top:16px;">
+      Requires Chrome or Edge on desktop. Plug the miner in with a USB-C <em>data</em> cable, pick the
+      right device above, click <strong>Connect &amp; Flash</strong>, choose the serial port, and confirm.
+      This does a full flash at <code>0x0</code>.
+    </p>
+
+    <div class="note warn">
+      <strong>After flashing, the miner drops off your network &mdash; this is normal.</strong> A full flash
+      erases saved settings, including WiFi, so the device will <em>not</em> return at its old IP. It boots
+      into a temporary setup access point (an open network named like <code>Bitaxe_xxxx</code> or
+      <code>NerdAxe_xxxx</code>). Join that AP from a phone or laptop, use the setup page to connect the
+      miner to your WiFi, then open its web UI. This is expected, not a brick.
+    </div>
+
+    <h2>Set up dual mining</h2>
+    <ul>
+      <li>Open the device's web UI &rarr; <strong>Settings</strong> / <strong>Pool</strong>.</li>
+      <li><strong>BitAxe:</strong> enable <strong>Dual Mining (Pool B)</strong>, set the split interval and
+        Pool A share %, then fill in Pool B host/port/user/password.</li>
+      <li><strong>NerdAxe:</strong> set <strong>Pool Mode = Dual</strong>, adjust the pool balance slider, and
+        enter both pools' host/port/user/password.</li>
+      <li>Save and restart. Both pools connect and accept shares in your configured ratio.</li>
+    </ul>
+
+    <div class="note">
+      <strong>Already running the firmware?</strong> You don't need this page. Update over the air instead:
+      open your device's web UI &rarr; firmware update, and upload the app + web UI (this keeps your config).
+      Grab those from
+      <a href="https://github.com/SerpentXSF/Dual-Pool-Mining-NerdAxe-BitAxe/tree/main/Firmware-Binaries">Firmware-Binaries</a>
+      (<code>esp-miner*.bin</code> = firmware, <code>www.bin</code> = web UI).
+    </div>
+
+    <h2>Prefer the command line?</h2>
+    <p>Grab the factory image for your device from
+      <a href="https://github.com/SerpentXSF/Dual-Pool-Mining-NerdAxe-BitAxe/tree/main/Firmware-Binaries">Firmware-Binaries</a>
+      and:</p>
+    <pre>pip install esptool
+python -m esptool --chip esp32s3 --port &lt;PORT&gt; write-flash 0x0 &lt;factory-image&gt;.bin</pre>
+    <p class="muted">Add <code>--no-stub</code> if esptool stalls on the ESP32-S3 USB-Serial/JTAG port.</p>
+
+    <p class="muted" style="margin-top: 40px;">
+      <a href="https://github.com/SerpentXSF/Dual-Pool-Mining-NerdAxe-BitAxe">Source on GitHub</a> &middot;
+      BitAxe on ESP-Miner &middot; NerdAxe on ESP-Miner-NerdQAxePlus &middot; GPL-3.0
+    </p>
+  </div>
+</body>
+</html>
