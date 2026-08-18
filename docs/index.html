@@ -19,8 +19,7 @@
     h1 { font-size: 1.9rem; margin: 0 0 4px; }
     h2 { font-size: 1.15rem; margin: 34px 0 8px; color: #aab6d4; }
     .sub { color: #93a1bd; margin: 0 0 28px; }
-    .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; }
     .card {
       background: #171e2e;
       border: 1px solid #2a3550;
@@ -75,15 +74,32 @@
 
       <div class="card">
         <h3>NerdAxe</h3>
-        <p class="chip">NerdAxe / NerdAxe Gamma &middot; BM1370 &middot; ESP32-S3</p>
+        <p class="chip">Original NerdAxe &middot; BM1366 &middot; ESP32-S3</p>
         <esp-web-install-button manifest="./manifest-nerdaxe.json">
           <button class="activate" slot="activate">Connect &amp; Flash</button>
           <span slot="unsupported" class="unsupported">Use Chrome or Edge on desktop.</span>
           <span slot="not-allowed" class="unsupported">Needs an https page + serial permission.</span>
         </esp-web-install-button>
-        <p class="what">Flashes the dual-pool factory image (ESP-Miner fork).</p>
+        <p class="what">For the original NerdAxe with a <strong>BM1366</strong> ASIC.</p>
+      </div>
+
+      <div class="card">
+        <h3>NerdAxe Gamma</h3>
+        <p class="chip">NerdAxe Gamma &middot; BM1370 &middot; ESP32-S3</p>
+        <esp-web-install-button manifest="./manifest-nerdaxegamma.json">
+          <button class="activate" slot="activate">Connect &amp; Flash</button>
+          <span slot="unsupported" class="unsupported">Use Chrome or Edge on desktop.</span>
+          <span slot="not-allowed" class="unsupported">Needs an https page + serial permission.</span>
+        </esp-web-install-button>
+        <p class="what">For the NerdAxe <strong>Gamma</strong> with a <strong>BM1370</strong> ASIC.</p>
       </div>
     </div>
+
+    <p class="muted" style="margin-top:10px;">
+      <strong>Not sure which NerdAxe you have?</strong> Check your device's web UI (or its label) &mdash;
+      a <strong>Gamma</strong> uses the <code>BM1370</code> ASIC, the original NerdAxe uses <code>BM1366</code>.
+      Flashing the wrong one won't hash correctly.
+    </p>
 
     <p class="muted" style="margin-top:16px;">
       Requires Chrome or Edge on desktop. Plug the miner in with a USB-C <em>data</em> cable, pick the
