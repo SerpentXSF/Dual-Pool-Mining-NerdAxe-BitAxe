@@ -124,10 +124,17 @@ export class SettingsComponent implements OnInit, OnDestroy {
         )
       ),
       tap(list => {
+        // Track the latest stable release so the version-status label can resolve.
+        // The component read this.latestStableRelease but never assigned it, so the
+        // status was stuck on "Unknown". Prefer the flagged latest, else the newest
+        // non-prerelease, else the newest entry.
+        this.latestStableRelease =
+          list.find(r => r.isLatest) ?? list.find(r => !r.prerelease) ?? list[0] ?? null;
         if (!this.selectedRelease || !list.find(r => r.id === this.selectedRelease!.id)) {
           this.selectedRelease = list[0] ?? null;
-          this.updateSelectedReleaseDeps();
         }
+        // Recomputes updateStatus + versionComparison and refreshes selected-release deps.
+        this.updateVersionStatus();
       }),
       shareReplay({ refCount: true, bufferSize: 1 })
     );
@@ -502,7 +509,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   // Helper to build expected factory filename for a given release
   private buildFactoryNameFor(release: GithubRelease): string {
-    return `esp-miner-factory-${this.normalizedModel}-${release.tag_name}.bin`;
+    // Our Firmware-Binaries / GitHub releases name the factory image per lowercased
+    // model (esp-miner-factory-nerdaxe.bin, esp-miner-factory-nerdaxegamma.bin), not
+    // the upstream esp-miner-factory-<Model>-<tag>.bin form.
+    return `esp-miner-factory-${this.normalizedModel.toLowerCase()}.bin`;
   }
 
   public getAppVersion() {

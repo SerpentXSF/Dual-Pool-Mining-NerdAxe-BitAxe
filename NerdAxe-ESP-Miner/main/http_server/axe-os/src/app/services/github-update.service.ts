@@ -41,8 +41,12 @@ export enum UpdateStatus {
 })
 export class GithubUpdateService {
 
+  // This is the SerpentX dual-pool fork. Point the in-UI update checker at OUR
+  // releases so the settings panel reports our version (not upstream's) and so
+  // "Install from GitHub" flashes OUR firmware -- an upstream image would wipe the
+  // dual-pool fork.
   private readonly baseReleasesUrl =
-    'https://api.github.com/repos/shufps/ESP-Miner-NerdQAxePlus/releases';
+    'https://api.github.com/repos/SerpentXSF/Dual-Pool-Mining-NerdAxe-BitAxe/releases';
 
   constructor(
     private httpClient: HttpClient
