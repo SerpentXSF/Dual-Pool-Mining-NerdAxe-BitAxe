@@ -156,6 +156,20 @@ esp_err_t rest_common_get_handler(httpd_req_t *req)
 
     size_t uri_len = strlen(uri_clean);
 
+    // An /api/* request only reaches this wildcard file handler when no API handler
+    // matched it (an unknown endpoint, or a request during the boot window before the
+    // handlers registered). Return a clean, uncacheable JSON 404 instead of the SPA
+    // index.html redirect below -- otherwise the browser caches HTML that the Angular
+    // app tries to JSON.parse, hanging the UI on "Loading..." (Chrome, after a flash).
+    if (strncmp(uri_clean, "/api/", 5) == 0) {
+        ESP_LOGW(TAG, "unmatched api path: %s -> 404", uri_clean);
+        set_cors_headers(req);  // also sets Cache-Control: no-store
+        httpd_resp_set_status(req, "404 Not Found");
+        httpd_resp_set_type(req, "application/json");
+        httpd_resp_send(req, "{\"error\":\"not found\"}", HTTPD_RESP_USE_STRLEN);
+        return ESP_OK;
+    }
+
     // Map "/foo/" -> "/foo/index.html"
     if (uri_len > 0 && uri_clean[uri_len - 1] == '/') {
         if (strlen(filepath) + strlen("/index.html") + 1 > filePathLength) {

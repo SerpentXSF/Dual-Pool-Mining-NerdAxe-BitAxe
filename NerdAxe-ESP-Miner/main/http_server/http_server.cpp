@@ -1,4 +1,6 @@
 
+#include <string.h>
+
 #include "esp_http_server.h"
 #include "esp_log.h"
 #include "esp_timer.h"
@@ -92,6 +94,19 @@ static esp_err_t http_404_error_handler(httpd_req_t *req, httpd_err_code_t err)
 {
     // close connection when out of scope
     ConGuard g(http_server, req);
+
+    // A JSON API request that reaches the 404 handler (unknown endpoint, or the boot
+    // window before handlers registered) must get a clean, uncacheable JSON 404 -- not
+    // the captive-portal HTML redirect below. Otherwise the browser caches HTML under
+    // the API URL and the Angular UI hangs JSON.parse'ing it (Chrome, after a flash).
+    if (strncmp(req->uri, "/api/", 5) == 0) {
+        ESP_LOGW(TAG, "unmatched api path (404 handler): %s -> 404", req->uri);
+        set_cors_headers(req);  // also sets Cache-Control: no-store
+        httpd_resp_set_status(req, "404 Not Found");
+        httpd_resp_set_type(req, "application/json");
+        httpd_resp_send(req, "{\"error\":\"not found\"}", HTTPD_RESP_USE_STRLEN);
+        return ESP_OK;
+    }
 
     // Set status
     httpd_resp_set_status(req, "302 Temporary Redirect");

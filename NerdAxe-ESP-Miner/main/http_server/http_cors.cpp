@@ -166,7 +166,11 @@ esp_err_t set_cors_headers(httpd_req_t *req)
 {
     return (httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*") == ESP_OK &&
             httpd_resp_set_hdr(req, "Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS") == ESP_OK &&
-            httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "Content-Type, Authorization, X-TOTP, X-OTP-Session") == ESP_OK)
+            httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "Content-Type, Authorization, X-TOTP, X-OTP-Session") == ESP_OK &&
+            // API/JSON responses must never be cached by the browser. A stale cached
+            // response (e.g. HTML served during a boot-window redirect to "/") makes the
+            // Angular UI JSON.parse HTML and hang on "Loading..." in Chrome after a flash.
+            httpd_resp_set_hdr(req, "Cache-Control", "no-store") == ESP_OK)
                ? ESP_OK
                : ESP_FAIL;
 }
