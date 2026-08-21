@@ -211,3 +211,25 @@ Validates scheduler ratio accuracy, clamps, and the failover state machine.
 - Total device hashrate is shared between the pools in the configured ratio.
 - This is a customization of third-party open-source firmware; review pool terms before
   pointing hashrate at any pool.
+
+## License & Credits
+
+GPL-3.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+
+This repository is a derivative work combining two upstream GPL-3.0 firmwares,
+each preserved with its original license in its subdirectory:
+
+- **BitAxe** — [bitaxeorg/ESP-Miner](https://github.com/bitaxeorg/ESP-Miner)
+  (AxeOS), GPL-3.0 — see [BitAxe-ESP-Miner/LICENSE](BitAxe-ESP-Miner/LICENSE)
+- **NerdAxe** — [shufps/ESP-Miner-NerdQAxePlus](https://github.com/shufps/ESP-Miner-NerdQAxePlus),
+  GPL-3.0 — see [NerdAxe-ESP-Miner/LICENSE](NerdAxe-ESP-Miner/LICENSE)
+
+SerpentX modifications (simultaneous dual-pool split, per-pool password, per-pool
+failover, prebuilt binaries + web flasher, in-UI update panel) are GPL-3.0; see
+the git commit history for the changes and their dates. Bundled third-party
+components (e.g. `libsecp256k1`, MIT) keep their own licenses. Full attribution
+and statement of changes: [NOTICE](NOTICE).
+
+"BitAxe", "NerdAxe", and "NerdQAxe" are names of their respective upstream
+projects; this is an independent, community-maintained fork and is not affiliated
+with or endorsed by them.

@@ -1,0 +1,60 @@
+SerpentX Dual-Pool Mining — BitAxe & NerdAxe
+Copyright (C) 2025-2026 SerpentX  (https://github.com/SerpentXSF)
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License version 3, as published by the Free
+Software Foundation. See the LICENSE file for the full license text.
+
+--------------------------------------------------------------------------------
+Derivative work / upstream attribution
+--------------------------------------------------------------------------------
+
+This repository is a DERIVATIVE WORK. It combines and modifies the following
+upstream GPL-3.0 projects. Each upstream's original copyright notice and license
+file are preserved unmodified in the corresponding subdirectory:
+
+  BitAxe-ESP-Miner/    ESP-Miner (AxeOS)
+                       Copyright (C) The Bitaxe project / bitaxeorg (Skot) and
+                       contributors — GNU GPL v3.0
+                       https://github.com/bitaxeorg/ESP-Miner
+                       Upstream license preserved at: BitAxe-ESP-Miner/LICENSE
+
+  NerdAxe-ESP-Miner/   ESP-Miner-NerdQAxePlus (a fork of ESP-Miner)
+                       Copyright (C) shufps and contributors — GNU GPL v3.0
+                       https://github.com/shufps/ESP-Miner-NerdQAxePlus
+                       Upstream license preserved at: NerdAxe-ESP-Miner/LICENSE
+
+--------------------------------------------------------------------------------
+Bundled third-party components (retain their own, separate licenses)
+--------------------------------------------------------------------------------
+
+Both firmware trees use third-party components that are NOT GPL and keep their
+own licenses; the GPL-3.0 grant above does not relicense them:
+
+  */components/libsecp256k1/   secp256k1 — Copyright (C) Pieter Wuille, Andrew
+                               Poelstra, and contributors — MIT license.
+                               Vendored in-tree; see that directory's COPYING.
+  managed_components/          ESP-IDF managed components (Espressif and others),
+                               fetched at build time (not stored in this repo) —
+                               their respective licenses (Apache-2.0 / MIT).
+
+--------------------------------------------------------------------------------
+Statement of changes (GPL-3.0 section 5a)
+--------------------------------------------------------------------------------
+
+Modifications by SerpentX (2025-2026), also licensed under GNU GPL v3.0, add:
+true simultaneous dual-pool SHA-256d mining with a configurable per-pool
+hashrate split, a custom per-pool password field, per-pool failover, prebuilt
+binaries with a hosted web flasher, and an in-UI "Release & Update" panel that
+points at this project's releases. The complete, dated list of changes is the
+git commit history of this repository.
+
+--------------------------------------------------------------------------------
+Trademarks
+--------------------------------------------------------------------------------
+
+"BitAxe", "NerdAxe", and "NerdQAxe" are names used by their respective upstream
+projects and their authors. This repository is an independent, community-
+maintained fork and is NOT affiliated with, sponsored by, or endorsed by those
+projects or their authors. Those names are used solely to identify the hardware
+this firmware runs on (nominative use).
