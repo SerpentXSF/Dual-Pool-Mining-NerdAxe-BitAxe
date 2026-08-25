@@ -1,12 +1,12 @@
 {
   "name": "BitAxe Dual-Pool (SerpentX)",
-  "version": "SerpentX-DualPool-1.1",
+  "version": "SerpentX-DualPool-1.3",
   "new_install_prompt_erase": true,
   "builds": [
     {
       "chipFamily": "ESP32-S3",
       "parts": [
-        { "path": "https://raw.githubusercontent.com/SerpentXSF/Dual-Pool-Mining-NerdAxe-BitAxe/a33ad39becefd381a156596b2934e0d66d7911c5/Firmware-Binaries/BitAxe/esp-miner-factory.bin", "offset": 0 }
+        { "path": "https://raw.githubusercontent.com/SerpentXSF/Dual-Pool-Mining-NerdAxe-BitAxe/d059094a7149c75a0df9ac72ba83045ee9f783d0/Firmware-Binaries/BitAxe/esp-miner-factory.bin", "offset": 0 }
       ]
     }
   ]
