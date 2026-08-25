@@ -6,6 +6,7 @@
 #include "esp_timer.h"
 #include "system_api_json.h"
 #include "log_buffer.h"
+#include "job_id_stats.h"
 #include "nvs_config.h"
 #include "sv2_protocol.h"
 #include "vcore.h"
@@ -66,6 +67,20 @@ static void system_api_add_telemetry(cJSON *root, GlobalState *g) {
     // wrapped faster than the console could drain it. Non-zero means the serial
     // log is incomplete - useful when a serial capture disagrees with the ring.
     cJSON_AddNumberToObject(root, "logDroppedBytes", (double) log_buffer_get_stdout_dropped_bytes());
+    // Job-ID reuse diagnostics (components/dual_pool/job_id_stats.c). These
+    // decide, with data, whether upstream's global duplicate-job filter could be
+    // adopted: jobIdDupPoolA/B are same-pool repeats (what that filter targets),
+    // while jobIdCrossPool counts IDs live on BOTH pools - work a global filter
+    // would have silently discarded.
+    cJSON_AddNumberToObject(root, "jobIdSeenPoolA", jobstat_seen(JOBSTAT_POOL_A));
+    cJSON_AddNumberToObject(root, "jobIdSeenPoolB", jobstat_seen(JOBSTAT_POOL_B));
+    cJSON_AddNumberToObject(root, "jobIdDupPoolA", jobstat_dups(JOBSTAT_POOL_A));
+    cJSON_AddNumberToObject(root, "jobIdDupPoolB", jobstat_dups(JOBSTAT_POOL_B));
+    cJSON_AddNumberToObject(root, "jobIdCrossPool", jobstat_cross_collisions());
+    // Should stay 0. Non-zero means samples were dropped under lock contention,
+    // so the dup/cross counts are under-sampled and a zero must NOT be read as
+    // "no duplicates occurred".
+    cJSON_AddNumberToObject(root, "jobIdSkipped", jobstat_skipped());
     cJSON_AddNumberToObject(root, "sharesAccepted", g->SYSTEM_MODULE.shares_accepted);
     cJSON_AddNumberToObject(root, "sharesRejected", g->SYSTEM_MODULE.shares_rejected);
     cJSON_AddNumberToObject(root, "bestDiff", g->SYSTEM_MODULE.best_nonce_diff);

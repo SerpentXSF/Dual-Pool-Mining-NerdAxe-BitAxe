@@ -1,3 +1,4 @@
+#include "job_id_stats.h"
 #include "esp_log.h"
 #include "esp_system.h"
 #include "system.h"
@@ -288,6 +289,11 @@ void stratum_v1_task(void *pvParameters)
         STRATUM_V1_configure_version_rolling(GLOBAL_STATE->transport, stratum_get_next_uid(GLOBAL_STATE), &GLOBAL_STATE->version_mask);
 
         // mining.subscribe - ID: 2
+        // Fresh session: forget this pool's previous job IDs. Pools commonly
+        // restart their ID sequence per connection, so carrying them across a
+        // reconnect would register as duplicates that upstream's filter - whose
+        // state also resets here - would never have seen.
+        jobstat_reset_pool(JOBSTAT_POOL_A);
         STRATUM_V1_subscribe(GLOBAL_STATE->transport, stratum_get_next_uid(GLOBAL_STATE), GLOBAL_STATE->DEVICE_CONFIG.family.asic.name);
 
         char *username = use_fallback ? GLOBAL_STATE->SYSTEM_MODULE.fallback_pool_user : GLOBAL_STATE->SYSTEM_MODULE.pool_user;
@@ -340,6 +346,10 @@ void stratum_v1_task(void *pvParameters)
                     break;
 
                 case MINING_NOTIFY:
+                    // Diagnostic only (see components/dual_pool/job_id_stats.c):
+                    // measures job-ID reuse so we can tell with data whether
+                    // upstream's global duplicate-job filter would be safe here.
+                    jobstat_record(JOBSTAT_POOL_A, stratum_api_v1_message.mining_notification->job_id);
                     GLOBAL_STATE->SYSTEM_MODULE.work_received++;
                     SYSTEM_notify_new_ntime(GLOBAL_STATE, stratum_api_v1_message.mining_notification->ntime);
                     if (stratum_api_v1_message.mining_notification->clean_jobs &&

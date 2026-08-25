@@ -1,3 +1,4 @@
+#include "job_id_stats.h"
 #include "esp_log.h"
 #include "esp_system.h"
 #include "global_state.h"
@@ -125,6 +126,7 @@ void stratum_poolb_task(void *pvParameters)
             esp_transport_ssl_set_common_name(t, url);
         }
 
+        jobstat_reset_pool(JOBSTAT_POOL_B);   // fresh session - see the Pool A site
         if (esp_transport_connect(t, ci.host_ip, port, POOLB_TRANSPORT_TIMEOUT_MS) != ESP_OK) {
             ESP_LOGE(TAG, "Pool B connect failed %s:%d", url, port);
             esp_transport_close(t);
@@ -176,6 +178,8 @@ void stratum_poolb_task(void *pvParameters)
 
             switch (poolb_msg.method) {
                 case MINING_NOTIFY:
+                    // Diagnostic only - see the Pool A site and job_id_stats.c.
+                    jobstat_record(JOBSTAT_POOL_B, poolb_msg.mining_notification->job_id);
                     if (poolb_msg.mining_notification->clean_jobs) {
                         if (g->stratum_queueB.count > 0) {
                             queue_clear(&g->stratum_queueB);

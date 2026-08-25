@@ -9,6 +9,7 @@
 #include "asic_result_task.h"
 #include "create_jobs_task.h"
 #include "stratum_poolb_task.h"
+#include "job_id_stats.h"
 #include "hashrate_monitor_task.h"
 #include "fan_controller_task.h"
 #include "statistics_task.h"
@@ -59,6 +60,8 @@ static void cjson_free_psram(void *ptr)
 void app_main(void)
 {
     ESP_ERROR_CHECK(heap_caps_register_failed_alloc_callback(heap_alloc_failed_hook));
+
+    jobstat_init();
 
     cJSON_Hooks hooks = {
         .malloc_fn = cjson_malloc_psram,
