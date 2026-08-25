@@ -6,10 +6,20 @@ import { SystemInfo as ISystemInfo } from 'src/app/generated/models';
 import { SystemApiService } from './system.service';
 import { environment } from 'src/environments/environment';
 
+// Poll cadence and the freshness window that decides whether the socket is
+// actually feeding us. Both are deliberately below the dashboard's 5000 ms
+// "Unable to reach the device" threshold (home.component.ts::checkStaleData),
+// so a normal request round-trip can never trip the banner on its own.
+const VISIBLE_POLL_MS = 3000;
+const HIDDEN_POLL_MS = 60000;
+const DATA_FRESH_MS = 3000;
+
 @Injectable({
   providedIn: 'root'
 })
 export class LiveDataService {
+  // Wall-clock of the last payload actually received, from ANY source.
+  private lastDataTime = 0;
   private socket$: WebSocketSubject<any> | null = null;
   private updates$ = new Subject<Partial<ISystemInfo>>();
   
@@ -31,14 +41,19 @@ export class LiveDataService {
       shareReplay(1)
     );
 
-    // Periodic polling fallback (adjust frequency based on visibility)
+    // Periodic polling fallback. The gate is whether DATA is actually arriving,
+    // NOT whether the socket happens to be open: an open-but-silent WebSocket
+    // used to disable polling entirely, so the dashboard went blind and reported
+    // the device unreachable while HTTP was perfectly healthy. When the socket is
+    // genuinely streaming, every tick sees fresh data and skips the request, so
+    // this costs nothing in the healthy case.
     const fallbackPolling$ = visibility$.pipe(
       switchMap(state => {
-        const interval = state === 'visible' ? 5000 : 60000; // 5s when visible, 60s when hidden
+        const interval = state === 'visible' ? VISIBLE_POLL_MS : HIDDEN_POLL_MS;
         return timer(interval, interval).pipe(
           switchMap(() => {
-            // Only poll if not connected OR if backgrounded (to keep data fresh)
-            if (this.connectedSubject.value && state === 'visible') return EMPTY;
+            const dataIsFresh = Date.now() - this.lastDataTime < DATA_FRESH_MS;
+            if (this.connectedSubject.value && state === 'visible' && dataIsFresh) return EMPTY;
             return this.systemService.getInfo();
           })
         );
@@ -65,6 +80,8 @@ export class LiveDataService {
     );
 
     this.info$ = merge(initialInfo$, updates$).pipe(
+      // Stamp freshness for the polling gate above, whatever the source was.
+      tap(() => this.lastDataTime = Date.now()),
       scan((acc: ISystemInfo, curr: Partial<ISystemInfo>) => ({ ...acc, ...curr } as ISystemInfo), {} as ISystemInfo),
       // Ensure we have at least once received a message with a recognizable field before emitting
       filter(info => !!info.version || !!info.uptimeSeconds),

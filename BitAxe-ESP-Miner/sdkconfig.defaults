@@ -37,3 +37,8 @@ CONFIG_MBEDTLS_CHACHAPOLY_C=y
 CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC=y
 CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
 CONFIG_FREERTOS_RUN_TIME_COUNTER_TYPE_U64=y
+
+# Required so the WS client registry is populated: ESP-IDF >=5.5 does not call
+# the URI handler on a websocket handshake (httpd_uri.c), so registration runs
+# from httpd_uri_t.ws_post_handshake_cb instead.
+CONFIG_HTTPD_WS_POST_HANDSHAKE_CB_SUPPORT=y
