@@ -5,6 +5,7 @@
 #include "esp_heap_caps.h"
 #include "esp_timer.h"
 #include "system_api_json.h"
+#include "log_buffer.h"
 #include "nvs_config.h"
 #include "sv2_protocol.h"
 #include "vcore.h"
@@ -61,6 +62,10 @@ static void system_api_add_telemetry(cJSON *root, GlobalState *g) {
     cJSON_AddFloatToObject(root, "hashRate_10m", g->SYSTEM_MODULE.hashrate_10m);
     cJSON_AddFloatToObject(root, "hashRate_1h", g->SYSTEM_MODULE.hashrate_1h);
     cJSON_AddFloatToObject(root, "errorPercentage", g->SYSTEM_MODULE.error_percentage);
+    // Bytes of log the deferred UART writer had to discard because the ring
+    // wrapped faster than the console could drain it. Non-zero means the serial
+    // log is incomplete - useful when a serial capture disagrees with the ring.
+    cJSON_AddNumberToObject(root, "logDroppedBytes", (double) log_buffer_get_stdout_dropped_bytes());
     cJSON_AddNumberToObject(root, "sharesAccepted", g->SYSTEM_MODULE.shares_accepted);
     cJSON_AddNumberToObject(root, "sharesRejected", g->SYSTEM_MODULE.shares_rejected);
     cJSON_AddNumberToObject(root, "bestDiff", g->SYSTEM_MODULE.best_nonce_diff);

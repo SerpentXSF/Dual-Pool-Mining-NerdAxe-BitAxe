@@ -350,6 +350,14 @@ components:
         errorPercentage:
           type: number
           description: Hash error percentage
+        logDroppedBytes:
+          type: integer
+          format: int64
+          description: >-
+            Bytes of log output discarded because the in-memory ring wrapped
+            faster than the UART console could drain it. Non-zero means a serial
+            capture is incomplete; the websocket/ring view is unaffected.
+          example: 0
         hostname:
           type: string
           description: Device hostname

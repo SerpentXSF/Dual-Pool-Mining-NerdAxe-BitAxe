@@ -165,35 +165,58 @@ void websocket_init(httpd_handle_t server)
 }
 
 /**
+ * Admission control, run BEFORE the handshake response is sent.
+ *
+ * Invoked via httpd_uri_t.ws_pre_handshake_cb (httpd_uri.c calls this ahead of
+ * httpd_ws_respond_server_handshake). Because the socket is still plain HTTP at
+ * this point, a rejected client can be told WHY with a real status code. Doing
+ * these checks after the handshake - as this code used to - meant the only way
+ * to refuse was to complete the 101 and then drop the socket, which the client
+ * sees as a healthy connection that mysteriously dies, and which the browser
+ * then retries every 5s forever.
+ *
+ * Requires CONFIG_HTTPD_WS_PRE_HANDSHAKE_CB_SUPPORT=y.
+ */
+esp_err_t websocket_on_pre_handshake(httpd_req_t *req)
+{
+    if (is_network_allowed(req) != ESP_OK) {
+        ESP_LOGW(TAG, "Rejecting WebSocket client from a disallowed network");
+        httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Unauthorized");
+        return ESP_FAIL;
+    }
+
+    // Only the httpd task mutates the registry, and this callback runs on it,
+    // so this check-then-admit is serialised by construction - no lock needed
+    // and no race with the matching add in websocket_on_handshake().
+    int active_clients = 0;
+    for (int i = 0; i < WS_TYPE_MAX; i++) active_clients += type_counts[i];
+    if (active_clients >= MAX_WEBSOCKET_CLIENTS) {
+        ESP_LOGE(TAG, "Max WebSocket clients reached, rejecting new connection");
+        httpd_resp_send_custom_err(req, "429 Too Many Requests", "Max WebSocket clients reached");
+        return ESP_FAIL;
+    }
+
+    return ESP_OK;
+}
+
+/**
  * Registers a newly-connected WebSocket client.
  *
  * Invoked via httpd_uri_t.ws_post_handshake_cb. As of ESP-IDF 5.5 the URI
  * handler is deliberately NOT called for a handshake - httpd_uri.c ends that
  * path with "If the request is websocket handshake, then do not call the
- * uri->handler". The registration used to live in websocket_handler behind a
+ * uri->handler". Registration used to live in websocket_handler behind a
  * handshake branch, which therefore never ran on 5.5: no client was ever added,
  * type_counts stayed 0, websocket_api_task sat in its "no clients" hibernate
  * path, and /api/ws/live accepted connections while never sending a byte.
  *
- * The handshake response has already been sent by the time this runs, so a
- * rejection cannot be an HTTP error response any more - returning ESP_FAIL makes
- * esp_http_server tear the socket down, which is the supported mechanism.
+ * Admission is decided earlier, in websocket_on_pre_handshake(); by the time
+ * this runs the 101 has been sent, so anything failing here can only close the
+ * socket rather than report a status.
  * Requires CONFIG_HTTPD_WS_POST_HANDSHAKE_CB_SUPPORT=y.
  */
 esp_err_t websocket_on_handshake(httpd_req_t *req)
 {
-    if (is_network_allowed(req) != ESP_OK) {
-        ESP_LOGW(TAG, "Rejecting WebSocket client from a disallowed network");
-        return ESP_FAIL;
-    }
-
-    int active_clients = 0;
-    for (int i = 0; i < WS_TYPE_MAX; i++) active_clients += type_counts[i];
-    if (active_clients >= MAX_WEBSOCKET_CLIENTS) {
-        ESP_LOGE(TAG, "Max WebSocket clients reached, rejecting new connection");
-        return ESP_FAIL;
-    }
-
     uint32_t type = (uint32_t)(uintptr_t)req->user_ctx;
     int fd = httpd_req_to_sockfd(req);
 
@@ -202,9 +225,9 @@ esp_err_t websocket_on_handshake(httpd_req_t *req)
     // other core, and two concurrent httpd_ws_send_frame_async() calls on one
     // socket interleave their header/payload writes and corrupt the framing.
     // Sending first closes that window; the client may miss one <=500ms diff,
-    // which is harmless because the UI merges partial updates. The cap was
-    // already checked above and only the httpd task mutates the registry, so a
-    // slot is guaranteed to still be free here.
+    // which is harmless because the UI merges partial updates. Admission was
+    // already decided in websocket_on_pre_handshake() and only the httpd task
+    // mutates the registry, so a slot is guaranteed to still be free here.
     if (type == WS_TYPE_API) {
         websocket_api_on_connect(fd);
     }

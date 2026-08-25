@@ -26,12 +26,21 @@ file swap.
   `components/stratum/stratum_api.{c,h}`, `main/http_server/system_api_json.c`,
   `main/http_server/axe-os/src/app/components/{pool,home}/…`, `version.txt`,
   `generate-version.js`.
-- **Biggest collision surface: `components/stratum/stratum_api.c`, ~593 changed lines.**
-  This was previously described as "mostly additive" and it is not - it includes a parse
-  refactor (`STRATUM_V1_parse` now returns bool), PSRAM allocation changes and dual-pool
-  guards. Upstream churns the same file hard (397/236 lines in v2.15.0 alone), so this is
-  where a missed upstream fix is most likely to hide. Worth a pass to see how much more of
-  it can be hoisted into `components/dual_pool/` the way `stratum_recv_ctx.c` was.
+- **Biggest divergence: `components/stratum/stratum_api.c`, 625 changed lines vs the
+  v2.14.2 base (397 added / 228 removed).** This was previously described as "mostly
+  additive"; it is not. But note *what* it is, because it changes what to do about it:
+  **almost none of it is dual-pool code.** One hunk accounts for the bulk - a refactor
+  splitting the monolithic `STRATUM_V1_parse` into ten validating `parse_*` helpers with
+  a bool return. Only ~7 of 351 added lines in that hunk mention pool/dual at all.
+  - **Do NOT try to "hoist" this into `components/dual_pool/`.** There is nothing
+    dual-pool-shaped left in it to hoist; `stratum_recv_ctx.c` already took that part.
+    It is core stratum parsing that we improved, not fork entanglement.
+  - The consequence is a **one-time "whose refactor wins"** decision if we ever rebase,
+    not ongoing merge pain. Upstream independently refactored the same function in
+    #1755 (+372/-225). Our version adds per-parameter validation the v2.14.2 base
+    lacked, so it is not obviously the one to discard.
+  - It remains the most likely place for a missed upstream fix to hide (upstream churned
+    it 397/236 in v2.15.0), which is what the release-watch ritual below is for.
 
 ## Deliberate divergence (the standing policy)
 
@@ -90,6 +99,11 @@ checklist item. Budget about an hour.
    in this fork**. Diff the actual tree before writing any code.
 5. **Record the verdicts in the ledger below**, then build, and hardware-verify on one
    device before the fleet.
+6. **Check the fleet afterwards** with `python tools/fleet_check.py --scan 192.168.50 --ws`.
+   It exits non-zero if any miner needs attention, so it can gate a release. The `--ws`
+   flag is the important one: it verifies frames actually *arrive* on the live websocket,
+   not merely that it connects. A connect-only test would have missed the mute-socket bug
+   entirely, because the socket was healthy - it just never spoke.
 
 ### Ledger
 

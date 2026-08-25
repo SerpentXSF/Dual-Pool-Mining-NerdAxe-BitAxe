@@ -38,7 +38,12 @@ CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC=y
 CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
 CONFIG_FREERTOS_RUN_TIME_COUNTER_TYPE_U64=y
 
-# Required so the WS client registry is populated: ESP-IDF >=5.5 does not call
-# the URI handler on a websocket handshake (httpd_uri.c), so registration runs
-# from httpd_uri_t.ws_post_handshake_cb instead.
+# ESP-IDF >=5.5 does not call the URI handler on a websocket handshake
+# (httpd_uri.c), so both halves of connection setup move to callbacks:
+#   PRE  - admission control (network allowed, client cap) while the socket is
+#          still plain HTTP, so a refusal can be a real 401/429 instead of a
+#          completed handshake that is immediately dropped.
+#   POST - registering the client, without which the API push task stays in its
+#          "no clients" hibernate path and the socket never sends a byte.
+CONFIG_HTTPD_WS_PRE_HANDSHAKE_CB_SUPPORT=y
 CONFIG_HTTPD_WS_POST_HANDSHAKE_CB_SUPPORT=y
