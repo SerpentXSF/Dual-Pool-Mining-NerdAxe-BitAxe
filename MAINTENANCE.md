@@ -1,7 +1,10 @@
-# Maintenance — keeping up with upstream
+# Maintenance — tracking upstream as a long-term-support fork
 
-**SerpentX Dual Pool Mining** customizes three upstream firmwares. The goal is to keep
-pulling upstream releases and re-applying our features cleanly. This doc is the playbook.
+**SerpentX Dual Pool Mining** customizes three upstream firmwares. This doc is the
+playbook. The goal is **not** to stay at parity with upstream: this is a deliberate
+long-term-support fork of the ESP-Miner v2.14.2 base, and we selectively port fixes
+rather than chasing releases. Read "Deliberate divergence" below before starting any
+rebase work.
 
 ## What's actually custom (the footprint)
 
@@ -16,12 +19,94 @@ file swap.
 ### BitAxe custom footprint
 - **Net-new (never conflicts):** `components/dual_pool/` (scheduler, clamps, failover,
   host tests), `main/tasks/stratum_poolb_task.{c,h}`.
-- **Edited upstream files (~15, mostly additive):** `main/global_state.h`,
+- **Edited upstream files (~24 in `main/`, ~1,360 changed lines; NOT all additive):**
+  `main/global_state.h`,
   `main/system.c`, `main/main.c`, `main/nvs_config.{c,h}`, `main/Kconfig.projbuild`,
   `main/CMakeLists.txt`, `main/tasks/create_jobs_task.c`, `main/tasks/asic_result_task.c`,
   `components/stratum/stratum_api.{c,h}`, `main/http_server/system_api_json.c`,
   `main/http_server/axe-os/src/app/components/{pool,home}/…`, `version.txt`,
   `generate-version.js`.
+- **Biggest collision surface: `components/stratum/stratum_api.c`, ~593 changed lines.**
+  This was previously described as "mostly additive" and it is not - it includes a parse
+  refactor (`STRATUM_V1_parse` now returns bool), PSRAM allocation changes and dual-pool
+  guards. Upstream churns the same file hard (397/236 lines in v2.15.0 alone), so this is
+  where a missed upstream fix is most likely to hide. Worth a pass to see how much more of
+  it can be hoisted into `components/dual_pool/` the way `stratum_recv_ctx.c` was.
+
+## Deliberate divergence (the standing policy)
+
+**This is a long-term-support fork of the ESP-Miner v2.14.2 base, not a fork chasing
+parity.** The product is the simultaneous dual-pool engine plus field-proven stability.
+Upstream parity is explicitly *not* a goal. Decided Aug 2026 after reviewing v2.15.0.
+
+Why this is the right trade:
+
+- **Upstream is not competing on this feature.** v2.15.0 added a saved pool *list* with
+  failover selection, not simultaneous mining. Our differentiator is intact.
+- **The engine is well isolated.** `components/dual_pool/` plus its own task, and its
+  deepest hooks sit in files upstream barely touches (`create_jobs_task.c` moved 6 lines
+  in v2.15.0; `asic_result_task.c` 6/4).
+- **The migration bridge is upstream's, not ours.** Our flat NVS keys are upstream's own
+  legacy format and upstream ships `migrate_legacy_pools()` to convert them,
+  non-destructively. Deferring costs almost nothing. Snapshot + our Pool B extension:
+  `docs/upstream-reference/`.
+- **A full rebase today would stack four migrations at once** - ESP-IDF 6.0.2 with the
+  MbedTLS 4 / PSA Crypto move, a from-scratch dashboard rewrite on Angular 19 + Tailwind
+  (~228 files upstream), re-porting the engine onto a restructured stratum, and the new
+  embedded-www build - on hardware that earns 24/7. Not worth it without a forcing
+  function.
+
+What we accept by choosing this: the web UI stays PrimeNG, upstream features do not
+arrive by merge, and if a rebase is ever forced the bill is larger than it would be
+today.
+
+**Revisit triggers** - any one of these reopens the decision:
+
+1. ESP-IDF 5.5 reaches end of life (currently supported into ~2027-2028).
+2. A security or correctness fix lands upstream that genuinely cannot be back-ported.
+3. Upstream ships native **simultaneous** dual-pool - at which point what is in question
+   is the fork's reason to exist, not its config layer.
+
+## Upstream release watch (do this once per upstream release)
+
+The real risk of an LTS fork is not merge pain, it is **silently missing a security or
+correctness fix** in code both sides edit. This ritual converts that hazard into a
+checklist item. Budget about an hour.
+
+1. **Fetch the new tag** into a scratch clone (never into this tree):
+   `git clone --depth 1 --branch vX.Y.Z https://github.com/bitaxeorg/ESP-Miner.git`
+   (or `git fetch --depth 1 origin tag vX.Y.Z` in an existing scratch clone).
+2. **Diff the watchlist** - the files where our edits and upstream's churn overlap:
+   `git diff vOLD..vNEW -- components/stratum main/tasks main/http_server main/nvs_config.c main/global_state.h main/system.c`
+   Diff with `--strip-trailing-cr`; this repo is CRLF and upstream is LF, so a raw diff
+   reports every line as changed and tells you nothing.
+3. **Triage every hunk** into exactly one of:
+   - **PORT** - take it (self-contained fix, applies to our base)
+   - **SKIP** - deliberately not taking it, with the reason
+   - **N/A** - does not apply (IDF 6-only API, `pools[]`-model-only, UI framework rewrite)
+4. **Verify before believing the changelog.** Release notes badly overstate what is new
+   for a diverged fork: of v2.15.0's headline items, the heap-fragmentation PSRAM work,
+   the `/api/theme` auth gate and the websocket broadcast-under-mutex fix were **already
+   in this fork**. Diff the actual tree before writing any code.
+5. **Record the verdicts in the ledger below**, then build, and hardware-verify on one
+   device before the fleet.
+
+### Ledger
+
+| Upstream | Reviewed | PORTed | SKIPped / N-A | Notes |
+|---|---|---|---|---|
+| v2.15.0 | 2026-08-25 | #1889 non-blocking UART logging (`log_buffer.c/h`, adopted byte-identical) | **Already had:** #1766 heap-frag PSRAM, #1759 `/api/theme` auth gate, #1803 broadcast-under-mutex (ours is stronger - we validate the fd with `httpd_ws_get_fd_info` against reuse, upstream does not). **Deferred:** #1829 IDF 6.0.2, #1763/#1839 unified firmware, #1651/#1815 Angular+Tailwind, the SV2 cluster. **Do not take as-is:** #1731 duplicate-jobId filter - see the trap note below. | Upstream shipped our websocket handshake bug in v2.14.2 and only fixed it inside their IDF 6 PR; this fork fixed it first (1.3). |
+
+### Known trap: upstream #1731 (duplicate jobId filter)
+
+Upstream dedups jobs against a **flat, global** array of job-ID strings. Stratum job IDs
+are **pool-local and collide routinely** - both pools happily issue `"1"`, `"2"`, `"a"`.
+Taken as-is into this fork it would silently discard legitimate work from the second
+pool, presenting as unexplained hashrate loss with no error anywhere. If it is ever
+wanted, the dedup key must be `(pool_index, job_id)` with per-pool arrays cleared on that
+pool's own reconnect. Upstream's companion global `reset_extranonce2` flag has the same
+defect. Tempting because job re-delivery across a switch may well contribute to our
+interval-vs-error behaviour - which is precisely why the naive version would be worse.
 
 ## Recommended workflow: fork + rebased feature branch
 
@@ -72,8 +157,14 @@ file swap.
    isn't one, a branded string is fine. Firmware `PROJECT_VER` and the web `axeOSVersion` both
    read this one file, so they always match (no version-mismatch banner). Bump it per release.
 
-The end game: `dual_pool/` is clean enough to eventually PR upstream, which is the
-ultimate maintenance strategy.
+`dual_pool/` is clean enough that upstreaming it is *conceivable*, but treat that as
+aspirational, not a plan. Upstream v2.15.0 deliberately architected the other way: a
+saved pool **list** with `primary_pool_index`/`secondary_pool_index` selected as
+failover (`screen.c`: `is_using_fallback ? secondary : primary`), driven by a single
+`create_jobs_task`. Simultaneous mining does not fit that shape, and our own field data
+(~20% error at a 500 ms split interval vs ~3% at 3000 ms) is exactly the support-burden
+argument a maintainer would use to decline. Gauging appetite with a discussion issue is
+cheap; plan for "no".
 
 ## Known latent issues (from review — none break steady-state mining)
 

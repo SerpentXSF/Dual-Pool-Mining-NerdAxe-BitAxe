@@ -1,0 +1,142 @@
+Upstream NVS legacy-pool migration shim — VERBATIM SNAPSHOT
+===========================================================
+
+Source : bitaxeorg/ESP-Miner, tag v2.15.0, commit b05090318e99192a4404c524b535a7312e083625
+File   : main/nvs_config.c (lines ~157-274)
+License: GPL-3.0-or-later, (c) the ESP-Miner contributors. Reproduced here under the
+         same licence purely as a maintenance reference. NOT COMPILED into this fork.
+
+WHY THIS FILE EXISTS
+--------------------
+Upstream v2.15.0 replaced the flat pool NVS keys with an indexed `pool_N` JSON array
+plus `prim_idx` / `sec_idx`. This fork still uses the flat keys, which are exactly the
+keys the function below reads. So the flat layout is not a fork-specific divergence: it
+is upstream's own legacy format, and this converter is upstream's supported bridge off
+it. It is NON-DESTRUCTIVE - it writes the new keys and leaves the legacy ones in place,
+so a downgrade still finds its config.
+
+Snapshotted because upstream may delete the shim in a later release. If this fork ever
+migrates to the pools[] model, start from this rather than writing a migration under
+pressure against live, revenue-earning miners. See docs/upstream-reference/POOLB-MAPPING.md
+for the fork-specific extension this does NOT cover.
+
+--- BEGIN VERBATIM ---
+static char* read_legacy_str(nvs_handle_t h, const char *key, const char *def) {
+    size_t len = 0;
+    if (nvs_get_str(h, key, NULL, &len) == ESP_OK && len > 0) {
+        char *buf = malloc(len);
+        if (buf) {
+            if (nvs_get_str(h, key, buf, &len) == ESP_OK) {
+                return buf;
+            }
+            free(buf);
+        }
+    }
+    return strdup(def ? def : "");
+}
+
+static uint16_t read_legacy_u16(nvs_handle_t h, const char *key, uint16_t def) {
+    uint16_t val;
+    if (nvs_get_u16(h, key, &val) == ESP_OK) {
+        return val;
+    }
+    return def;
+}
+
+static bool read_legacy_bool(nvs_handle_t h, const char *key, bool def) {
+    uint16_t val;
+    if (nvs_get_u16(h, key, &val) == ESP_OK) {
+        return val != 0;
+    }
+    return def;
+}
+
+static void migrate_legacy_pools(void) {
+    size_t len = 0;
+    // Check if new configuration already exists
+    if (nvs_get_str(handle, "pool_1", NULL, &len) == ESP_OK) {
+        return; // Already migrated
+    }
+
+    ESP_LOGI(TAG, "Migrating legacy NVS pool configurations...");
+
+    // Migrate Primary Pool -> pool_1
+    char *p_proto = read_legacy_str(handle, "stratumprot", STRATUM_V1);
+    char *p_url = read_legacy_str(handle, "stratumurl", CONFIG_STRATUM_URL);
+    uint16_t p_port = read_legacy_u16(handle, "stratumport", CONFIG_STRATUM_PORT);
+    char *p_user = read_legacy_str(handle, "stratumuser", CONFIG_STRATUM_USER);
+    char *p_pass = read_legacy_str(handle, "stratumpass", CONFIG_STRATUM_PW);
+    uint16_t p_diff = read_legacy_u16(handle, "stratumdiff", CONFIG_STRATUM_DIFFICULTY);
+    bool p_xnsub = read_legacy_bool(handle, "stratumxnsub", STRATUM_EXTRANONCE_SUBSCRIBE);
+    uint16_t p_tls = read_legacy_u16(handle, "stratumtls", CONFIG_STRATUM_TLS);
+    char *p_cert = read_legacy_str(handle, "stratumcert", CONFIG_STRATUM_CERT);
+    char *p_sv2chan = read_legacy_str(handle, "sv2chantype", SV2_CHANNEL_TYPE_EXTENDED);
+    char *p_sv2pubkey = read_legacy_str(handle, "sv2authpubkey", "");
+    bool p_decode = read_legacy_bool(handle, "stratumdecode", true);
+
+    cJSON *p_json = cJSON_CreateObject();
+    cJSON_AddStringToObject(p_json, "stratumProtocol", p_proto);
+    cJSON_AddStringToObject(p_json, "stratumURL", p_url);
+    cJSON_AddNumberToObject(p_json, "stratumPort", p_port);
+    cJSON_AddStringToObject(p_json, "stratumUser", p_user);
+    cJSON_AddStringToObject(p_json, "stratumPassword", p_pass);
+    cJSON_AddNumberToObject(p_json, "stratumSuggestedDifficulty", p_diff);
+    cJSON_AddBoolToObject(p_json, "stratumExtranonceSubscribe", p_xnsub);
+    cJSON_AddNumberToObject(p_json, "stratumTLS", p_tls);
+    cJSON_AddStringToObject(p_json, "stratumCert", p_cert);
+    cJSON_AddStringToObject(p_json, "stratumV2ChannelType", p_sv2chan);
+    cJSON_AddStringToObject(p_json, "stratumV2AuthorityPubkey", p_sv2pubkey);
+    cJSON_AddBoolToObject(p_json, "stratumDecodeCoinbase", p_decode);
+
+    char *p_str = cJSON_PrintUnformatted(p_json);
+    if (p_str) {
+        nvs_set_str(handle, "pool_1", p_str);
+        free(p_str);
+    }
+    cJSON_Delete(p_json);
+    free(p_proto); free(p_url); free(p_user); free(p_pass); free(p_cert); free(p_sv2chan); free(p_sv2pubkey);
+
+    // Migrate Fallback Pool -> pool_2
+    char *f_proto = read_legacy_str(handle, "fbstratumprot", STRATUM_V1);
+    char *f_url = read_legacy_str(handle, "fbstratumurl", CONFIG_FALLBACK_STRATUM_URL);
+    uint16_t f_port = read_legacy_u16(handle, "fbstratumport", CONFIG_FALLBACK_STRATUM_PORT);
+    char *f_user = read_legacy_str(handle, "fbstratumuser", CONFIG_FALLBACK_STRATUM_USER);
+    char *f_pass = read_legacy_str(handle, "fbstratumpass", CONFIG_FALLBACK_STRATUM_PW);
+    uint16_t f_diff = read_legacy_u16(handle, "fbstratumdiff", CONFIG_FALLBACK_STRATUM_DIFFICULTY);
+    bool f_xnsub = read_legacy_bool(handle, "stratumfbxnsub", FALLBACK_STRATUM_EXTRANONCE_SUBSCRIBE);
+    uint16_t f_tls = read_legacy_u16(handle, "fbstratumtls", CONFIG_FALLBACK_STRATUM_TLS);
+    char *f_cert = read_legacy_str(handle, "fbstratumcert", CONFIG_FALLBACK_STRATUM_CERT);
+    char *f_sv2chan = read_legacy_str(handle, "fbsv2chantype", SV2_CHANNEL_TYPE_EXTENDED);
+    char *f_sv2pubkey = read_legacy_str(handle, "fbsv2authpubk", "");
+    bool f_decode = read_legacy_bool(handle, "fbstratumdecode", true);
+
+    cJSON *f_json = cJSON_CreateObject();
+    cJSON_AddStringToObject(f_json, "stratumProtocol", f_proto);
+    cJSON_AddStringToObject(f_json, "stratumURL", f_url);
+    cJSON_AddNumberToObject(f_json, "stratumPort", f_port);
+    cJSON_AddStringToObject(f_json, "stratumUser", f_user);
+    cJSON_AddStringToObject(f_json, "stratumPassword", f_pass);
+    cJSON_AddNumberToObject(f_json, "stratumSuggestedDifficulty", f_diff);
+    cJSON_AddBoolToObject(f_json, "stratumExtranonceSubscribe", f_xnsub);
+    cJSON_AddNumberToObject(f_json, "stratumTLS", f_tls);
+    cJSON_AddStringToObject(f_json, "stratumCert", f_cert);
+    cJSON_AddStringToObject(f_json, "stratumV2ChannelType", f_sv2chan);
+    cJSON_AddStringToObject(f_json, "stratumV2AuthorityPubkey", f_sv2pubkey);
+    cJSON_AddBoolToObject(f_json, "stratumDecodeCoinbase", f_decode);
+
+    char *f_str = cJSON_PrintUnformatted(f_json);
+    if (f_str) {
+        nvs_set_str(handle, "pool_2", f_str);
+        free(f_str);
+    }
+    cJSON_Delete(f_json);
+    free(f_proto); free(f_url); free(f_user); free(f_pass); free(f_cert); free(f_sv2chan); free(f_sv2pubkey);
+
+    // Set default selectors: primary = 0, fallback = 1
+    nvs_set_u16(handle, "prim_idx", 0);
+    nvs_set_u16(handle, "sec_idx", 1);
+    nvs_commit(handle);
+
+    ESP_LOGI(TAG, "Legacy pool migration completed successfully");
+}
+--- END VERBATIM ---
