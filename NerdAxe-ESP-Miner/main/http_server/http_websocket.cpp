@@ -1,10 +1,26 @@
 #include "esp_log.h"
+#include "esp_idf_version.h"
 
 #include "http_cors.h"
 #include "http_utils.h"
 #include "http_websocket.h"
 #include "macros.h"
 #include "utils.h"
+
+
+// ESP-IDF >= 5.5 no longer invokes the URI handler for a websocket handshake:
+// components/esp_http_server/src/httpd_uri.c ends that path with "If the request
+// is websocket handshake, then do not call the uri->handler" and returns early.
+// This fork captures websocket_fd from echo_handler's HTTP_GET branch, which is
+// correct on the 5.3.3 toolchain it currently builds with, but becomes dead code
+// on >= 5.5 - the log socket would then accept connections and never send a byte
+// (exactly the bug fixed on the BitAxe side in websocket.c). ws_on_handshake()
+// below is wired to httpd_uri_t.ws_post_handshake_cb when the toolchain offers
+// it; if someone bumps to >= 5.5 without enabling that Kconfig option, fail the
+// build here rather than ship a silent regression.
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 5, 0) && !defined(CONFIG_HTTPD_WS_POST_HANDSHAKE_CB_SUPPORT)
+#error "ESP-IDF >= 5.5 does not call the URI handler on a websocket handshake. Enable CONFIG_HTTPD_WS_POST_HANDSHAKE_CB_SUPPORT so ws_on_handshake() registers the log client."
+#endif
 
 static const char* TAG = "http_websocket";
 
@@ -85,17 +101,32 @@ static void send_log_to_websocket(char *message)
  * This handler echos back the received ws data
  * and triggers an async send if certain message received
  */
+/*
+ * Adopts the freshly-connected socket as the log stream. Shared by both entry
+ * points so the two toolchains behave identically: ws_post_handshake_cb on
+ * ESP-IDF >= 5.5, and echo_handler's HTTP_GET branch on older releases.
+ */
+esp_err_t ws_on_handshake(httpd_req_t *req)
+{
+    if (is_network_allowed(req) != ESP_OK) {
+        return ESP_FAIL;
+    }
+    ESP_LOGI(TAG, "Handshake done, the new connection was opened");
+    websocket_fd = httpd_req_to_sockfd(req);
+    esp_log_set_vprintf(log_to_queue);
+    return ESP_OK;
+}
+
 esp_err_t echo_handler(httpd_req_t *req)
 {
     if (is_network_allowed(req) != ESP_OK) {
         return httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Unauthorized");
     }
 
+    // Only reached on ESP-IDF < 5.5; newer releases route this through
+    // ws_post_handshake_cb instead (see the guard at the top of this file).
     if (req->method == HTTP_GET) {
-        ESP_LOGI(TAG, "Handshake done, the new connection was opened");
-        websocket_fd = httpd_req_to_sockfd(req);
-        esp_log_set_vprintf(log_to_queue);
-        return ESP_OK;
+        return ws_on_handshake(req);
     }
 
     // Handle websocket frames (e.g. CLOSE)

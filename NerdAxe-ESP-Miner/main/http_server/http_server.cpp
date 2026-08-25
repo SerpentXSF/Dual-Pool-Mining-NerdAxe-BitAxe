@@ -345,7 +345,12 @@ esp_err_t start_rest_server(void * pvParameters)
         .uri = "/api/system/OTAWWW", .method = HTTP_POST, .handler = POST_WWW_update, .user_ctx = NULL};
     httpd_register_uri_handler(http_server, &update_post_ota_www);
 
-    httpd_uri_t ws = {.uri = "/api/ws", .method = HTTP_GET, .handler = echo_handler, .user_ctx = NULL, .is_websocket = true};
+    httpd_uri_t ws = {.uri = "/api/ws", .method = HTTP_GET, .handler = echo_handler, .user_ctx = NULL, .is_websocket = true
+#if defined(CONFIG_HTTPD_WS_POST_HANDSHAKE_CB_SUPPORT)
+        // ESP-IDF >= 5.5 does not call the handler on a handshake; register here.
+        , .ws_post_handshake_cb = ws_on_handshake
+#endif
+    };
     httpd_register_uri_handler(http_server, &ws);
 
     httpd_uri_t update_post_ota_from_url = {
