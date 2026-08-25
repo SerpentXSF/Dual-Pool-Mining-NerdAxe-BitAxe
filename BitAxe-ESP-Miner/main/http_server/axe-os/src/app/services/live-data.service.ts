@@ -7,12 +7,21 @@ import { SystemApiService } from './system.service';
 import { environment } from 'src/environments/environment';
 
 // Poll cadence and the freshness window that decides whether the socket is
-// actually feeding us. Both are deliberately below the dashboard's 5000 ms
-// "Unable to reach the device" threshold (home.component.ts::checkStaleData),
-// so a normal request round-trip can never trip the banner on its own.
-const VISIBLE_POLL_MS = 3000;
+// actually feeding us.
+//
+// The worst case is a tick landing just inside the freshness window (so it
+// skips) followed by the next tick: the largest gap between payloads is
+// therefore VISIBLE_POLL_MS + DATA_FRESH_MS + one round-trip. These values keep
+// that at ~4.2s, comfortably under the 5000 ms staleness threshold that raises
+// "Unable to reach the device" (home.component.ts::checkStaleData), so no phase
+// alignment can flash the banner while HTTP is answering.
+//
+// DATA_FRESH_MS also has a floor: the firmware pushes a diff roughly every
+// 500 ms and at least once a second (uptimeSeconds always changes), so anything
+// comfortably above ~1s avoids redundant polls while the socket is healthy.
+const VISIBLE_POLL_MS = 2500;
 const HIDDEN_POLL_MS = 60000;
-const DATA_FRESH_MS = 3000;
+const DATA_FRESH_MS = 1500;
 
 @Injectable({
   providedIn: 'root'
