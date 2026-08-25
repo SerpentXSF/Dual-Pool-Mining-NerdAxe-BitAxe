@@ -74,7 +74,7 @@ device's web UI, open the update page and upload **both** files for your device 
 | Device | Where | Firmware file (upload as-is) | Website file |
 |--------|-------|------------------------------|--------------|
 | **BitAxe** | AxeOS → **System / Update** | `esp-miner.bin` | `www.bin` |
-| **NerdAxe** (BM1366) | web UI → **Settings** | `esp-miner-NerdAxe.bin` | `www.bin` |
+| **NerdAxe** (BM1366) | web UI → **Settings** | `esp-miner-nerdaxe.bin` | `www.bin` |
 | **NerdAxe Gamma** (BM1370) | web UI → **Settings** | `esp-miner-NerdAxeGamma.bin` | `www.bin` |
 
 Upload **both** every time — the firmware and web UI are a matched pair (a mismatch triggers
