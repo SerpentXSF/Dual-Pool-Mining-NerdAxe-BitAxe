@@ -99,6 +99,18 @@ void websocket_remove_client(int fd)
 void websocket_send_to_client(int fd, httpd_ws_frame_t *pkt)
 {
     if (server_handle == NULL || fd == -1) return;
+
+    // httpd_ws_send_frame_async() does NOT validate the session: it resolves the
+    // fd and writes straight to the socket. The httpd task can close a session
+    // and lwip can hand the same fd to a brand-new (possibly plain-HTTP)
+    // connection between our registry read and this send, which would inject WS
+    // frame bytes into an unrelated response. httpd_ws_get_fd_info() reports
+    // HTTPD_WS_CLIENT_WEBSOCKET only while ws_handshake_done && !ws_close, so it
+    // rejects both a reused fd and a socket already closing.
+    if (httpd_ws_get_fd_info(server_handle, fd) != HTTPD_WS_CLIENT_WEBSOCKET) {
+        return;
+    }
+
     if (httpd_ws_send_frame_async(server_handle, fd, pkt) != ESP_OK) {
         ESP_LOGW(TAG, "Failed to send WebSocket frame to fd: %d", fd);
     }
@@ -108,10 +120,28 @@ void websocket_broadcast(WebSocketClientType type, httpd_ws_frame_t *pkt)
 {
     if (server_handle == NULL) return;
 
+    // Snapshot the matching fds under the lock, then send with the lock RELEASED.
+    // Holding clients_mutex across the sends would let a slow/blocked send stall
+    // websocket_remove_client past its 100ms mutex timeout, and that function
+    // bails WITHOUT removing the client - leaking a registry slot and eventually
+    // wedging the MAX_WEBSOCKET_CLIENTS cap for good.
+    int fds[MAX_WEBSOCKET_CLIENTS];
+    int n = 0;
+
+    if (clients_mutex == NULL) return;
+    if (xSemaphoreTake(clients_mutex, pdMS_TO_TICKS(100)) != pdTRUE) {
+        ESP_LOGW(TAG, "Failed to acquire mutex for broadcast; skipping this tick");
+        return;
+    }
     for (int i = 0; i < MAX_WEBSOCKET_CLIENTS; i++) {
-        if (clients[i].fd != -1 && (clients[i].type == type)) {
-            websocket_send_to_client(clients[i].fd, pkt);
+        if (clients[i].fd != -1 && clients[i].type == type) {
+            fds[n++] = clients[i].fd;
         }
+    }
+    xSemaphoreGive(clients_mutex);
+
+    for (int i = 0; i < n; i++) {
+        websocket_send_to_client(fds[i], pkt);
     }
 }
 
@@ -166,13 +196,22 @@ esp_err_t websocket_on_handshake(httpd_req_t *req)
 
     uint32_t type = (uint32_t)(uintptr_t)req->user_ctx;
     int fd = httpd_req_to_sockfd(req);
+
+    // Send the initial full state BEFORE registering. Once the fd is in the
+    // registry the 500ms websocket_api_task tick can broadcast to it from the
+    // other core, and two concurrent httpd_ws_send_frame_async() calls on one
+    // socket interleave their header/payload writes and corrupt the framing.
+    // Sending first closes that window; the client may miss one <=500ms diff,
+    // which is harmless because the UI merges partial updates. The cap was
+    // already checked above and only the httpd task mutates the registry, so a
+    // slot is guaranteed to still be free here.
+    if (type == WS_TYPE_API) {
+        websocket_api_on_connect(fd);
+    }
+
     if (websocket_add_client(fd, type) != ESP_OK) {
         ESP_LOGE(TAG, "Unexpected failure adding client, fd: %d", fd);
         return ESP_FAIL;
-    }
-
-    if (type == WS_TYPE_API) {
-        websocket_api_on_connect(fd);
     }
 
     return ESP_OK;
