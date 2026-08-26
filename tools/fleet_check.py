@@ -33,6 +33,19 @@ WARN_TEMP_C = 68
 WARN_ERROR_PCT = 5.0
 WARN_REJECT_PCT = 1.0
 
+# Per-device error ceilings, keyed by IP or hostname. A miner deliberately
+# tuned to trade error rate for hashrate will sit above the fleet default
+# without being unhealthy, and a check that cries wolf on every run stops
+# being read - which is how a real fault gets missed. .218 (GammaX4) was tuned
+# for throughput inside its thermal envelope with an agreed 6% ceiling, so ~5%
+# there is expected. Raising the fleet default instead would have hidden a
+# genuine 5% regression on every OTHER miner, so the exemption is per-device.
+# Update the key if DHCP moves the device; the hostname fallback covers that.
+DEVICE_ERROR_PCT = {
+    "192.168.50.218": 6.0,
+    "GammaX4 1.5Ths": 6.0,
+}
+
 # The dashboard declares a device unreachable after 5s without data, so any
 # websocket gap approaching that is worth surfacing.
 WS_GAP_WARN_MS = 5000
@@ -50,6 +63,19 @@ def fetch(ip):
         return None
     d["_ip"] = ip
     return d
+
+
+def error_ceiling(info):
+    """The error-rate threshold for this device.
+
+    Falls back to the fleet default, so an untuned or unknown miner is still
+    held to the strict bar. Returns (ceiling, is_custom) so the caller can
+    show the exemption rather than silently applying it.
+    """
+    for key in (info.get("_ip"), info.get("hostname")):
+        if key in DEVICE_ERROR_PCT:
+            return DEVICE_ERROR_PCT[key], True
+    return WARN_ERROR_PCT, False
 
 
 def pools_of(info):
@@ -151,8 +177,9 @@ def assess(info, ws, family="axeos"):
         warn.append("temp %.0fC >= %d" % (temp, WARN_TEMP_C))
 
     err = info.get("errorPercentage")
-    if isinstance(err, (int, float)) and err > WARN_ERROR_PCT:
-        warn.append("error %.1f%% > %.1f" % (err, WARN_ERROR_PCT))
+    ceiling, _ = error_ceiling(info)
+    if isinstance(err, (int, float)) and err > ceiling:
+        warn.append("error %.1f%% > %.1f" % (err, ceiling))
 
     acc, rej = info.get("sharesAccepted"), info.get("sharesRejected")
     if isinstance(acc, int) and isinstance(rej, int) and acc + rej > 0:
@@ -222,6 +249,11 @@ def main():
         exp_s = "/%.0f" % exp if isinstance(exp, (int, float)) else ""
         err = info.get("errorPercentage")
         err_s = " err=%.2f%%" % err if isinstance(err, (int, float)) else ""
+        ceiling, custom = error_ceiling(info)
+        if err_s and custom:
+            # Show the exemption. An invisible one would make a genuinely sick
+            # device look fine to whoever reads this next.
+            err_s += "(cap %.0f%%)" % ceiling
         up_h = (info.get("uptimeSeconds") or 0) // 3600
 
         # temp is coerced like hr: a device reporting null must not abort the run
