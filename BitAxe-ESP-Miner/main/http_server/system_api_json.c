@@ -140,9 +140,14 @@ static void system_api_add_config(cJSON *root, GlobalState *g) {
     cJSON_AddNumberToObject(root, "nominalVoltage", g->DEVICE_CONFIG.family.nominal_voltage);
     cJSON_AddNumberToObject(root, "smallCoreCount", g->DEVICE_CONFIG.family.asic.small_core_count);
     cJSON_AddStringToObject(root, "ASICModel", g->DEVICE_CONFIG.family.asic.name ? g->DEVICE_CONFIG.family.asic.name : "Unknown");
-    // asicCount is what this board model ships with; chipsDetected is how many
-    // actually answered at startup. Reported together because either number is
-    // meaningless alone - it is the disagreement that tells you something failed.
+    // asicCount is what this board model ships with. chipsDetected is what the
+    // chain detection returned - and on THIS firmware that is pass/fail, not a
+    // tally: count_asic_chips() yields 0 whenever the number found differs from
+    // asic_count in either direction, so the only values are asic_count or 0. A
+    // partial chain therefore reads 0 here, and the surviving chip number lives
+    // only in the log and in asic_status. Reported together because neither is
+    // meaningful alone - the disagreement is the signal. (NerdOS reports a true
+    // count; do not assume the two firmwares mean the same thing by this field.)
     cJSON_AddNumberToObject(root, "asicCount", g->DEVICE_CONFIG.family.asic_count);
     cJSON_AddNumberToObject(root, "chipsDetected", g->chips_detected);
     cJSON_AddNumberToObject(root, "isPSRAMAvailable", g->psram_is_available ? 1 : 0);
