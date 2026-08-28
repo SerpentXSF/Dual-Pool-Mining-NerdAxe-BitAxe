@@ -33,6 +33,14 @@ WARN_TEMP_C = 68
 WARN_ERROR_PCT = 5.0
 WARN_REJECT_PCT = 1.0
 
+# chipsDetected is only meaningful once the miner has finished starting up. On
+# both firmwares the REST server is answering before the ASICs are initialised,
+# so a perfectly healthy device reports chipsDetected 0 for roughly the first
+# half-minute after a reboot. Flagging that would fire on every single restart,
+# and a check that cries wolf is a check nobody reads. Observed ~25s to detect
+# on both a NerdAxe and a GammaX2; 120s leaves ample margin.
+CHIPS_SETTLE_S = 120
+
 # Per-device error ceilings, keyed by IP or hostname. A miner deliberately
 # tuned to trade error rate for hashrate will sit above the fleet default
 # without being unhealthy, and a check that cries wolf on every run stops
@@ -176,6 +184,18 @@ def assess(info, ws, family="axeos"):
     if isinstance(temp, (int, float)) and temp >= WARN_TEMP_C:
         warn.append("temp %.0fC >= %d" % (temp, WARN_TEMP_C))
 
+    # An ASIC that failed to start is otherwise invisible: the miner reports its
+    # configured chip count and frequency and simply hashes low. Note the two
+    # firmwares differ - NerdOS reports a true count, AxeOS reports 0 on any
+    # mismatch - but on both, detected != configured means something is wrong.
+    chips = info.get("chipsDetected")
+    asics = info.get("asicCount")
+    up = info.get("uptimeSeconds")
+    if (isinstance(chips, int) and isinstance(asics, int) and asics > 0
+            and isinstance(up, (int, float)) and up >= CHIPS_SETTLE_S
+            and chips != asics):
+        warn.append("chips %d/%d detected" % (chips, asics))
+
     err = info.get("errorPercentage")
     ceiling, _ = error_ceiling(info)
     if isinstance(err, (int, float)) and err > ceiling:
@@ -250,10 +270,16 @@ def main():
         err = info.get("errorPercentage")
         err_s = " err=%.2f%%" % err if isinstance(err, (int, float)) else ""
         ceiling, custom = error_ceiling(info)
+        chips, asics = info.get("chipsDetected"), info.get("asicCount")
+        # Shown only when it disagrees, so the normal line stays readable.
+        chip_s = ""
+        if isinstance(chips, int) and isinstance(asics, int) and chips != asics:
+            chip_s = " chips=%d/%d" % (chips, asics)
         if err_s and custom:
             # Show the exemption. An invisible one would make a genuinely sick
             # device look fine to whoever reads this next.
             err_s += "(cap %.0f%%)" % ceiling
+        err_s += chip_s
         up_h = (info.get("uptimeSeconds") or 0) // 3600
 
         # temp is coerced like hr: a device reporting null must not abort the run
