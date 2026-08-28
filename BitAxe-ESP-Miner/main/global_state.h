@@ -224,6 +224,12 @@ typedef struct
     struct sv2_noise_ctx *sv2_noise_ctx;
 
     bool ASIC_initalized;
+    /* How many ASICs actually answered during asic_initialize(), as opposed to
+     * DEVICE_CONFIG.family.asic_count, which is what this board model is built
+     * with. asic_initialize() computed this and threw it away, so a chip that
+     * failed to come up was invisible: the miner just hashed at a fraction of
+     * its rate with every reading still looking normal. */
+    uint8_t chips_detected;
     bool psram_is_available;
     bool filesystem_is_available;
 

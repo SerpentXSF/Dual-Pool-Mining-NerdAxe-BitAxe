@@ -114,6 +114,16 @@ int Board::getAsicCount()
     return m_asicCount;
 }
 
+/* How many ASICs actually answered during initAsics(), as opposed to how many
+ * the board is configured to have. These differ when a chip fails to come up -
+ * the miner then runs at a fraction of its rate while every other reading, the
+ * configured asicCount and frequency included, still looks perfectly normal.
+ * Surfacing it makes that failure visible instead of silent. */
+int Board::getChipsDetected()
+{
+    return m_chipsDetected;
+}
+
 int Board::getAsicJobIntervalMs()
 {
     return m_asicJobIntervalMs;

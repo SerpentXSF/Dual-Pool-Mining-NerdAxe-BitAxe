@@ -140,6 +140,11 @@ static void system_api_add_config(cJSON *root, GlobalState *g) {
     cJSON_AddNumberToObject(root, "nominalVoltage", g->DEVICE_CONFIG.family.nominal_voltage);
     cJSON_AddNumberToObject(root, "smallCoreCount", g->DEVICE_CONFIG.family.asic.small_core_count);
     cJSON_AddStringToObject(root, "ASICModel", g->DEVICE_CONFIG.family.asic.name ? g->DEVICE_CONFIG.family.asic.name : "Unknown");
+    // asicCount is what this board model ships with; chipsDetected is how many
+    // actually answered at startup. Reported together because either number is
+    // meaningless alone - it is the disagreement that tells you something failed.
+    cJSON_AddNumberToObject(root, "asicCount", g->DEVICE_CONFIG.family.asic_count);
+    cJSON_AddNumberToObject(root, "chipsDetected", g->chips_detected);
     cJSON_AddNumberToObject(root, "isPSRAMAvailable", g->psram_is_available ? 1 : 0);
     cJSON_AddStringToObject(root, "resetReason", get_reset_reason_str(esp_reset_reason()));
     

@@ -47,6 +47,8 @@ uint8_t asic_initialize(GlobalState *GLOBAL_STATE, asic_init_mode_t mode, uint32
     clear_asic_chain_error();
     uint8_t chip_count = ASIC_init(GLOBAL_STATE);
     
+    GLOBAL_STATE->chips_detected = chip_count;
+
     if (chip_count == 0) {
         const char *chain_error = get_asic_chain_error();
         ESP_LOGE(TAG, "ASIC initialization failed - chip chain detection failed");

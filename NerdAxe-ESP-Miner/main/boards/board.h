@@ -121,6 +121,7 @@ public:
     int getVersion();
     const char *getAsicModel();
     int getAsicCount();
+    int getChipsDetected();
     int getAsicJobIntervalMs();
     uint32_t getInitialASICDifficulty();
 

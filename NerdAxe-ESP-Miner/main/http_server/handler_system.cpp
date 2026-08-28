@@ -98,6 +98,9 @@ esp_err_t GET_system_info(httpd_req_t *req)
 
     // static
     doc["asicCount"]          = board->getAsicCount();
+    // Detected != configured means an ASIC did not initialise; the miner will
+    // hash at a fraction of its rate with nothing else looking wrong.
+    doc["chipsDetected"]      = board->getChipsDetected();
     doc["smallCoreCount"]     = (board->getAsics()) ? board->getAsics()->getSmallCoreCount() : 0;
     doc["deviceModel"]        = board->getDeviceModel();
     doc["hostip"]             = SYSTEM_MODULE.getIPAddress();
