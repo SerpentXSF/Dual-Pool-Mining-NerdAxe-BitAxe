@@ -7,3 +7,7 @@ dist/
 .vscode/
 *.o
 test_dual_pool
+
+# Python (tools/)
+__pycache__/
+*.py[cod]
