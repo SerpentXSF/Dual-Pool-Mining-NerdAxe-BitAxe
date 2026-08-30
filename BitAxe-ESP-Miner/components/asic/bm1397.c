@@ -255,7 +255,19 @@ int BM1397_set_max_baud(void)
     return 3125000;
 }
 
-static uint8_t id = 0;
+/* DUAL-POOL: this counter used to be shared by both pools. The ASIC only
+ * round-trips a few bits of job id, so there are just 32 usable slots here (16 per pool after this change) -
+ * and when Pool A's next job claimed the slot Pool B was still mid-flight on,
+ * B's returning nonce validated against A's job and was thrown away (visible
+ * as poolBStaleDrops, ~1-2% of Pool B's shares). Each pool now walks its own
+ * disjoint set, so a cross-pool collision is impossible by construction:
+ *   A: 0,8,16,...,120   B: 4,12,20,...,124  (id % 8)
+ * The stride is a multiple of the set spacing, so a pool can never step out
+ * of its own set, and it still skips ahead the way the original did rather
+ * than reusing the immediately-previous slot.
+ */
+static uint8_t id_a = 0;
+static uint8_t id_b = 4;
 
 void BM1397_send_work(void *pvParameters, bm_job *next_bm_job)
 {
@@ -265,7 +277,15 @@ void BM1397_send_work(void *pvParameters, bm_job *next_bm_job)
     // max job number is 128
     // there is still some really weird logic with the job id bits for the asic to sort out
     // so we have it limited to 128 and it has to increment by 4
-    id = (id + 4) % 128;
+    /* pool_id 1 == Pool B (see bm_job in mining.h) */
+    uint8_t id;
+    if (next_bm_job->pool_id == 1) {
+        id_b = (id_b + 8) % 128;
+        id = id_b;
+    } else {
+        id_a = (id_a + 8) % 128;
+        id = id_a;
+    }
 
     job.job_id = id;
     job.num_midstates = next_bm_job->num_midstates;
