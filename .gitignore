@@ -11,3 +11,6 @@ test_dual_pool
 # Python (tools/)
 __pycache__/
 *.py[cod]
+
+# Crash-log captures (diagnostic data, not source)
+panic-captures/
