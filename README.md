@@ -60,6 +60,24 @@ the BitAxe and NerdAxe device families.
 | **BitAxe** | Web UI → **Pool** settings → **"Dual Mining (Simultaneous Pool B)"** | Enable Dual Mining, set **Split Interval** (ms) + **Pool A Share %**, fill **Pool B** host/port/user/**Pool Password** (+ optional Pool B Failover). **Split Interval / Pool A Share % / Enable now apply live — no reboot; Pool B endpoint & credentials still need a Restart.** |
 | **NerdAxe** | Web UI → **Settings** | Set **Pool Mode = Dual**, adjust the **Pool Balance** slider, enter each pool's **Password**. Save → Restart. (Native — per-pool hashrate split shows on the dashboard.) |
 
+#### BTC PoW Lab Pool B example
+
+BTC PoW Lab exposes a public Bitcoin Stratum V1 endpoint and uses a Bitcoin payout
+address as the worker name. To try it as Pool B, enter these values:
+
+```text
+Host: stratum.btcpowlab-pool.com
+Port: 3333
+User: <your Bitcoin payout address>
+Password: x
+```
+
+The pool starts at difficulty 1024 and can descend to difficulty 1. Its public
+[setup guide](https://btcpowlab-pool.com/start) and
+[reward model](https://btcpowlab-pool.com/hybrid-solo-bitcoin-mining) document the current connection
+and payout rules. Accepted work can increase participation under those rules, but
+mining never guarantees a block, a reward, or a profit.
+
 ### 3 · Update over the air (OTA)
 
 Already running this firmware? Update without a cable and keep your pool config. In the
