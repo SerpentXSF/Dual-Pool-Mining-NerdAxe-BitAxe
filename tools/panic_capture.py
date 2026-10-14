@@ -27,8 +27,20 @@ view away from that device's own dashboard for as long as this runs.
     python tools/panic_capture.py 192.168.50.149 192.168.50.243      # AxeOS
     python tools/panic_capture.py 192.168.50.210 --stream            # NerdOS
 
-Stdlib only, except `websockets`, which is needed only for --stream. Read-only:
-it never writes to a miner.
+What this tool can NEVER give you, on either firmware: the panic message itself.
+Confirmed on 2026-10-14 by forcing repeated real panics on a NerdQAxe++ while
+streaming. The captures end with ordinary mining output and stop; the panic
+handler's own output - the backtrace, the register dump, and the core-dump
+writer's "Not enough space to save core dump!" - is written by the ROM/panic
+path straight to the UART console. It never passes through the logging system,
+so it reaches neither /api/system/logs nor the websocket. What you get here is
+the LEAD-UP, which is usually what identifies the cause (e.g. grepping "ASIC
+not initialized" to tell an ASIC-powerdown spin from a WiFi-drop panic). For the
+panic text itself there is no substitute for a serial cable.
+
+Stdlib only, except `websockets`, which is needed only for --stream; --stream
+refuses to start without it rather than producing captures that look empty.
+Read-only: it never writes to a miner.
 """
 import argparse
 import json
@@ -189,6 +201,22 @@ def main():
                          "crash log can be captured at all. Takes the log view away from "
                          "that device's dashboard while running.")
     args = ap.parse_args()
+
+    # Fail here, not inside the streamer thread. --stream is the ONLY way to get a
+    # NerdOS crash log, so a missing package is fatal to the whole point of the run.
+    # The thread used to just drop a note in its own buffer and return, which left
+    # the run looking healthy: it still printed "(nerdos+stream)" and still wrote a
+    # capture file, just one reporting a single buffered line. That reads as a quiet
+    # device rather than a broken setup, and it cost a whole panic to notice.
+    if args.stream:
+        try:
+            import websockets  # noqa: F401
+        except ImportError:
+            ap.error("--stream needs the 'websockets' package (pip install websockets). "
+                     "Refusing to run: a NerdOS crash log cannot be captured without it, "
+                     "and continuing would produce captures that look empty rather than "
+                     "broken.")
+
     os.makedirs(args.outdir, exist_ok=True)
     events = os.path.join(args.outdir, "events.txt")
 
