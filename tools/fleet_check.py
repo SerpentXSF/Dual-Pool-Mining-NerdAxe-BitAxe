@@ -3,8 +3,13 @@
 
 Reads /api/system/info from each miner and prints a compact health line.
 Handles both firmware families:
-  * AxeOS (BitAxe)          - flat stratumURL, has errorPercentage
-  * NerdOS (NerdAxe/NerdQAxe) - stratum.pools[] array, no errorPercentage
+  * AxeOS (BitAxe)          - flat stratumURL
+  * NerdOS (NerdAxe/NerdQAxe) - stratum.pools[] array
+
+Both now report errorPercentage at the root of /api/system/info, so the error
+column and its ceiling check apply to either family. On NerdOS that field only
+exists from NerdQAxe Quad Miner v0.1.7 on; older builds, and NerdAxe boards
+still on stock, simply omit it and the column stays blank for them.
 
 On the dual-pool AxeOS fork, devices with dualEnable on also get a Pool B line
 (poolBUrl/poolBSharesAccepted/poolBSharesRejected/poolBStaleDrops). Devices
