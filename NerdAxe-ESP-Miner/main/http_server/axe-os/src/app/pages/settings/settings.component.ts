@@ -262,7 +262,13 @@ export class SettingsComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (this.selectedWebsiteFile.name !== 'www.bin') {
+    // Accept "www.bin" and any "www-<something>.bin" variant. A release has to
+    // name the NerdAxe web UI something other than plain www.bin, because the
+    // same release also carries the BitAxe one and they cannot both be www.bin;
+    // it ships as www-nerdaxe.bin. Insisting on the exact name here would mean
+    // every user had to rename the file they just downloaded before the upload
+    // would be accepted. Tag-suffixed names like www-1.7.bin work too.
+    if (!/^www(-[\w.+-]+)?\.bin$/.test(this.selectedWebsiteFile.name)) {
       this.toastrService.danger(`${this.translate.instant('TOAST.INCORRECT_FILE')}: www.bin`, this.translate.instant('TOAST.ERROR'));
       return;
     }
