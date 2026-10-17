@@ -131,3 +131,14 @@ itself performs is not enough, an explicit restart is. Nothing in the API
 reports this — the only tell is the hashrate — and a device was found sitting
 slow for its entire 48-day uptime because of it. Compare against the known good
 rate before and after.
+
+**On BitAxe, restart after flashing `www.bin` too, or the dashboard will lie.**
+`axeOSVersion` is read from `/version.txt` inside the www partition exactly once,
+during startup (`main/system.c`). `OTAWWW` does not reboot, so a device flashed
+firmware-then-www keeps serving the version string it read at boot — from the
+*previous* web UI. The dashboard then shows "Firmware (…) and AxeOS (…) versions
+do not match. Please make sure to update both www.bin and esp-miner.bin", which
+looks exactly like a bad release and is not: the banner clears on restart with no
+reflashing. This was briefly misread as a defective `www.bin` in the 1.7 release;
+the asset was fine. Confirm by grepping the asset itself —
+`grep -a SerpentX-DualPool www.bin` — before suspecting the build.
