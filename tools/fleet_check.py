@@ -83,6 +83,45 @@ def fetch(ip):
     return d
 
 
+def reset_reason(info):
+    """Why the device last rebooted, whichever firmware it runs.
+
+    AxeOS calls it `resetReason` and gives a sentence; NerdOS calls it
+    `lastResetReason` and gives an enum. Reading only one name silently reports
+    nothing for the other family.
+    """
+    for key in ("resetReason", "lastResetReason"):
+        v = info.get(key)
+        if isinstance(v, str) and v.strip():
+            return v.strip()
+    return None
+
+
+def is_panic_reason(reason):
+    """True for a crash, false for an ordinary boot.
+
+    Deliberately narrow: a power-on or a commanded restart is not interesting,
+    an exception/panic is. Anything unrecognised is treated as not-a-panic so
+    this cannot cry wolf on a reason string we have not seen before.
+    """
+    r = reason.lower()
+    if "poweron" in r or "power_on" in r:
+        return False
+    if "software" in r and "panic" not in r and "exception" not in r:
+        return False  # NerdOS SYSTEM.RESET_SOFTWARE = a commanded restart
+    return any(w in r for w in ("panic", "exception", "watchdog", "wdt", "brownout"))
+
+
+def short_age(seconds):
+    """Human age for an uptime, e.g. '2.2d' or '45m'."""
+    seconds = float(seconds)
+    if seconds >= 86400:
+        return "%.1fd" % (seconds / 86400.0)
+    if seconds >= 3600:
+        return "%.1fh" % (seconds / 3600.0)
+    return "%.0fm" % (seconds / 60.0)
+
+
 def error_ceiling(info):
     """The error-rate threshold for this device.
 
@@ -241,6 +280,17 @@ def assess(info, ws, family="axeos"):
             and isinstance(up, (int, float)) and up >= CHIPS_SETTLE_S
             and chips != asics):
         warn.append("chips %d/%d detected" % (chips, asics))
+
+    # A panic leaves no trace once the log ring has rolled, and the only thing
+    # left is the reset reason - which this tool did not read, so three BitAxes
+    # panicking within the same minute went unnoticed until someone compared
+    # uptimes by hand. The two firmwares disagree on the field name AND on the
+    # value format, so both have to be handled:
+    #   AxeOS   resetReason      "Software reset due to exception/panic"
+    #   NerdOS  lastResetReason  "SYSTEM.RESET_PANIC" / "SYSTEM.RESET_POWERON"
+    reason = reset_reason(info)
+    if reason and is_panic_reason(reason) and isinstance(up, (int, float)):
+        warn.append("panicked %s ago (%s)" % (short_age(up), reason))
 
     err = info.get("errorPercentage")
     ceiling, _ = error_ceiling(info)
