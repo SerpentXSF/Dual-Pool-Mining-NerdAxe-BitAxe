@@ -17,6 +17,7 @@ REQUIRES
     "app_update"
     "esp_timer"
     "tcp_transport"
+    "crt_bundle"
     "esp_netif"
     "esp_psram"
 )

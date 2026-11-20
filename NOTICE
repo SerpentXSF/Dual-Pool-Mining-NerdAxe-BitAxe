@@ -37,6 +37,25 @@ own licenses; the GPL-3.0 grant above does not relicense them:
   managed_components/          ESP-IDF managed components (Espressif and others),
                                fetched at build time (not stored in this repo) —
                                their respective licenses (Apache-2.0 / MIT).
+  */certificates/              cacert-2026-10-20.pem is an unmodified snapshot of
+                               curl's Mozilla-derived CA bundle (118 roots),
+                               https://curl.se/ca/cacert-2026-10-20.pem —
+                               Mozilla Public License 2.0.
+                               certificates/test/emudhra-chains-2026-10-20.zip
+                               is an unmodified copy of the public test chains
+                               published at emudhra.we-have-a-problem.com.
+                               Public certificates only, no private keys.
+
+The following are GPL-3.0, like the trees they sit in, but originate upstream
+rather than with this project:
+
+  */components/crt_bundle/     Adapted from ESP-Miner-NerdQAxePlus PR #758,
+                               Copyright (C) shufps and contributors — GPL-3.0.
+                               Extended here to parse both the ESP-IDF 5.3 and
+                               the 5.4+ embedded-bundle layouts; used in the
+                               BitAxe tree as well as the NerdAxe one.
+  */tools/test_ca_bundle.py    From ESP-Miner PR #2040, Copyright (C) the Bitaxe
+                               project / bitaxeorg and contributors — GPL-3.0.
 
 --------------------------------------------------------------------------------
 Statement of changes (GPL-3.0 section 5a)

@@ -1,0 +1,7 @@
+# tools/test_ca_bundle.py asserts the SHA-256 of the pinned CA bundle, and
+# gen_crt_bundle.py hashes it into the firmware. With core.autocrlf=true a
+# checkout would rewrite these to CRLF, change the hash and fail the check, so
+# they must never be line-ending converted.
+**/certificates/*.pem       -text
+**/certificates/*.sha256    -text
+**/certificates/test/*.zip  binary
