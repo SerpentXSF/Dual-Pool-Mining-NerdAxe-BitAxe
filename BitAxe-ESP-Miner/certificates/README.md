@@ -18,8 +18,8 @@ trust path ran through it, so a pool must serve a chain to a root that remains.
 `sdkconfig.defaults` disables ESP-IDF's full, common and deprecated lists and
 enables only this custom bundle. ESP-IDF custom bundles are otherwise
 **additive**, so re-enabling any default or deprecated list brings the affected
-roots back: the IDF versions these trees build against (5.5.x here, 5.3.x for the
-NerdAxe and Quad trees) all ship them. CMake refuses to configure a build whose
+roots back: the IDF versions these trees build against (5.5.x for the BitAxe
+tree, 5.3.x for the NerdAxe and Quad trees) all ship them. CMake refuses to configure a build whose
 settings would bypass this, including a stale `sdkconfig` that overrides the
 defaults.
 
@@ -48,10 +48,18 @@ topmost certificate when its subject and public key match a root in the bundle:
 the same trust anchor, reissued under a different issuer. Every call site uses
 `crt_bundle_attach()` rather than `esp_crt_bundle_attach()`. No root is added.
 
-The embedded bundle's binary layout differs between IDF 5.3 and 5.4+, so the
-component parses it according to `ESP_IDF_VERSION` and logs an error if the
-bundle does not parse, rather than silently falling back to rejecting
-cross-signed roots.
+The embedded bundle's binary layout differs between IDF 5.3 (a big-endian root
+count, then the roots) and 5.4+ (a native-endian offset list), so the component
+picks its parser from `ESP_IDF_VERSION`. Parsing the wrong layout is memory safe
+and fails closed: no root matches, so cross-signed chains are simply rejected.
+
+Be aware the "bundle did not parse" error only fires in one direction. Reading a
+5.3-format bundle with the 5.4+ parser yields a count of 0 and logs. Reading a
+5.4+ bundle with the 5.3 parser yields a large bogus count, matches nothing and
+logs nothing, so that direction fails closed *silently*. No release ESP-IDF hits
+this, since the gate matches the layout for every tag. Making the diagnostic
+symmetric needs a full walk at attach time that has to land exactly on
+`bundle_end`.
 
 ## Verification
 

@@ -70,6 +70,19 @@ gzip -dc .../dist/axe-os/28.<hash>.js.gz | grep -o 'selectedWebsiteFile\.name'
 generator and fails unless the store embedded in `esp-miner.bin` matches byte for
 byte. Run it per board, not once per release.
 
+Two things about that gate:
+
+- **Run it inside the builder container, not on native Windows.** `check_build()`
+  compares the configured bundle path against `str(BUNDLE.relative_to(ROOT))`,
+  which on Windows is `certificates\cacert-...pem` with a backslash, so it
+  reports "Build must use the pinned CA file" on a perfectly good build.
+- **Nothing runs it for you.** Each firmware tree carries its own
+  `.github/workflows`, but they sit in subdirectories, and GitHub only runs
+  workflows from the repository root, so neither repo has active CI. The
+  `ca-bundle-test` job from the upstream PRs was not ported either. The guard in
+  `CMakeLists.txt` still fires at configure time, but the bundle test is a manual
+  step and will stay manual until a root-level workflow exists.
+
 ## 3. Factory images
 
 ```bash

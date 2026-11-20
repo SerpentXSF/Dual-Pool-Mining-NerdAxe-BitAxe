@@ -119,16 +119,32 @@ static bool is_bundle_root(const mbedtls_x509_crt *crt)
 
 static int verify_callback(void *buf, mbedtls_x509_crt *crt, int depth, uint32_t *flags)
 {
-    // Only the topmost certificate comes back NOT_TRUSTED, and only when mbedTLS
-    // found no parent for it. Everything below it has already had its signature
-    // checked, so if this certificate carries a trusted root's subject and public
-    // key then the chain does end at that root -- it is the same trust anchor,
-    // reissued under a different issuer. BAD_MD is masked for the same reason
-    // ESP-IDF masks it on a root it already trusts; any other flag still falls
-    // through to ESP-IDF's own callback, so this only ever accepts a chain that
-    // was already cryptographically sound and merely unanchored.
+    // Accept a certificate that carries the subject and public key of a root in
+    // the bundle.
     //
-    // Note this neither adds nor removes an expiry check: MBEDTLS_HAVE_TIME_DATE
+    // Trust here rests on the KEY, never on this certificate's own signature.
+    // mbedTLS has already checked every lower certificate against the key of the
+    // certificate above it, so when this one's subject and SubjectPublicKeyInfo
+    // match a bundle root, the path below it was verified under that root's
+    // genuine key. A certificate forged to carry a root's name and key buys an
+    // attacker nothing, at any depth: completing the handshake still needs the
+    // matching private key.
+    //
+    // Do NOT assume NOT_TRUSTED only ever lands on the topmost certificate.
+    // mbedtls_x509_crt_verify's chain walk returns a non-trusted parent even
+    // when the child's signature under it is bad, so an intermediate can reach
+    // this callback flagged. That is still safe by the argument above: if the
+    // child's signature did not verify then the child itself carries
+    // NOT_TRUSTED, does not match a bundle root, and is left to ESP-IDF's
+    // callback, which checks it against a bundle key and rejects it.
+    //
+    // BAD_MD is masked for the same reason ESP-IDF masks it on a root it already
+    // trusts: it describes the hash over this certificate's own signature, which
+    // is not relied on. Every other flag -- BAD_KEY, BAD_PK, CN_MISMATCH,
+    // EXPIRED, the key-usage flags -- makes the comparison fail and falls
+    // through to ESP-IDF's callback with the flag still set.
+    //
+    // This neither adds nor removes an expiry check: MBEDTLS_HAVE_TIME_DATE
     // defaults to n and we do not set it, so mbedTLS does not check validity
     // dates on any path here.
     if ((*flags & ~MBEDTLS_X509_BADCERT_BAD_MD) == MBEDTLS_X509_BADCERT_NOT_TRUSTED && is_bundle_root(crt)) {

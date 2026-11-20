@@ -349,6 +349,17 @@ void StratumTaskV1::protocolLoop()
         // without a valid subscribe result there is no extranonce to build jobs
         // with; treat it as a pool error (normal reconnect delay) instead of
         // mining on against a connection that can only produce invalid work
+        //
+        // KNOWN LIMITATION, failover mode only: connectedCallback() already ran
+        // on this pool's first line, so in StratumManagerFallback it has
+        // selected us, disconnected the secondary and stopped its reconnect
+        // timer. Returning here restarts that 30s timer from zero, and our own
+        // 10s retry stops it again before it can expire, so a primary that
+        // keeps answering mining.subscribe badly starves a healthy fallback and
+        // nothing hashes. Dual-pool and 4-pool modes are unaffected:
+        // acceptsNotifyFrom() is always true there and disconnectedCallback()
+        // only touches this index. The ordering fix belongs in the failover
+        // manager, not here.
         if (m_setupFailed) {
             return;
         }
