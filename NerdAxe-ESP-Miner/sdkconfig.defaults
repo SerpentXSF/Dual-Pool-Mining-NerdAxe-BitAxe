@@ -1,3 +1,9 @@
+# Without this a fresh checkout with no sdkconfig configures for plain esp32,
+# which enables the ESP32 PSRAM cache workaround and overflows IRAM by ~4.8 KB.
+# CI worked around it with an explicit "idf.py set-target esp32s3"; stating the
+# target here makes the tree build correctly on its own.
+CONFIG_IDF_TARGET="esp32s3"
+
 CONFIG_PARTITION_TABLE_CUSTOM=y
 CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
 CONFIG_PARTITION_TABLE_FILENAME="partitions.csv"
@@ -52,8 +58,16 @@ CONFIG_MBEDTLS_SSL_OUT_CONTENT_LEN=16384
 # Good hygiene (and helps SNI/ALPN edge cases)
 CONFIG_MBEDTLS_SSL_ALPN=y
 CONFIG_MBEDTLS_SERVER_NAME_INDICATION=y
+# Pin our own CA bundle instead of whatever list the ESP-IDF in use ships.
+# ESP-IDF custom bundles are ADDITIVE, so the built-in lists must be off or the
+# eMudhra-affected roots come back. See certificates/README.md.
 CONFIG_MBEDTLS_CERTIFICATE_BUNDLE=y
-CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_DEFAULT_FULL=y
+# CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_DEFAULT_FULL is not set
+# CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_DEFAULT_CMN is not set
+CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_DEFAULT_NONE=y
+CONFIG_MBEDTLS_CUSTOM_CERTIFICATE_BUNDLE=y
+CONFIG_MBEDTLS_CUSTOM_CERTIFICATE_BUNDLE_PATH="certificates/cacert-2026-10-20.pem"
+# CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_DEPRECATED_LIST is not set
 
 
 CONFIG_LWIP_MAX_SOCKETS=16
