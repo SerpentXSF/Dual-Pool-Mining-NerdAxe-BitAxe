@@ -1,1 +1,1 @@
-SerpentX-DualPool-1.5
+SerpentX-DualPool-1.6

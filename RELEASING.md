@@ -10,8 +10,8 @@ There are two version files and they move independently:
 
 | file | firmware | current line |
 |---|---|---|
-| `BitAxe-ESP-Miner/version.txt` | BitAxe (AxeOS) | `SerpentX-DualPool-1.7` |
-| `NerdAxe-ESP-Miner/version.txt` | NerdAxe (NerdOS) | `SerpentX-DualPool-1.5` |
+| `BitAxe-ESP-Miner/version.txt` | BitAxe (AxeOS) | `SerpentX-DualPool-1.9` |
+| `NerdAxe-ESP-Miner/version.txt` | NerdAxe (NerdOS) | `SerpentX-DualPool-1.6` |
 
 Bump in the same commit as the code. Shipping changed code under a version
 string that already shipped makes field reports impossible to interpret, and it
@@ -40,6 +40,18 @@ for B in NERDAXE NERDAXEGAMMA; do
 done
 ```
 
+**A local `sdkconfig` outranks `sdkconfig.defaults`.** It is untracked, so it
+can drift from the tree for months and nobody notices; CI never has one. Delete
+it and let `idf.py reconfigure` regenerate it whenever the defaults change, which
+the CA bundle guard will now insist on anyway.
+
+Deleting it used to break the NerdAxe build in a way that looked like a code
+fault: `sdkconfig.defaults` did not name a target, so a fresh configure chose
+plain `esp32`, turned on the ESP32 PSRAM cache workaround, pulled libc into IRAM
+and failed to link with `region 'iram0_0_seg' overflowed by 4844 bytes`. CI hid
+this by running `idf.py set-target esp32s3` first. `CONFIG_IDF_TARGET="esp32s3"`
+is now stated in all three trees' defaults, so do not remove it.
+
 **`idf.py build` alone does NOT rebuild the web UI after a TypeScript change.**
 It reuses the cached Angular output, so a UI fix can appear to build fine and
 simply not be in `www.bin`. This cost a full debugging round once: the device
@@ -52,6 +64,11 @@ changes on every real rebuild, so it is a reliable fingerprint:
 ls NerdAxe-ESP-Miner/main/http_server/axe-os/dist/axe-os/*.js.gz
 gzip -dc .../dist/axe-os/28.<hash>.js.gz | grep -o 'selectedWebsiteFile\.name'
 ```
+
+**Changing the CA bundle needs a clean build**, and `tools/test_ca_bundle.py
+--build-dir build` is the gate: it re-converts the pinned PEM with ESP-IDF's own
+generator and fails unless the store embedded in `esp-miner.bin` matches byte for
+byte. Run it per board, not once per release.
 
 ## 3. Factory images
 
