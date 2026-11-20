@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, Subject, EMPTY, timer, merge, fromEvent } from 'rxjs';
-import { catchError, retry, share, tap, switchMap, startWith, scan, shareReplay, map, timeout, bufferTime, filter, distinctUntilChanged } from 'rxjs/operators';
+import { catchError, retry, share, tap, switchMap, startWith, scan, shareReplay, map, timeout, bufferTime, filter, distinctUntilChanged, exhaustMap } from 'rxjs/operators';
 import { webSocket, WebSocketSubject } from 'rxjs/webSocket';
 import { SystemInfo as ISystemInfo } from 'src/app/generated/models';
 import { SystemApiService } from './system.service';
@@ -60,7 +60,7 @@ export class LiveDataService {
       switchMap(state => {
         const interval = state === 'visible' ? VISIBLE_POLL_MS : HIDDEN_POLL_MS;
         return timer(interval, interval).pipe(
-          switchMap(() => {
+          exhaustMap(() => {
             const dataIsFresh = Date.now() - this.lastDataTime < DATA_FRESH_MS;
             if (this.connectedSubject.value && state === 'visible' && dataIsFresh) return EMPTY;
             return this.systemService.getInfo();
@@ -125,7 +125,7 @@ export class LiveDataService {
     });
 
     return this.socket$.pipe(
-      timeout(5000),
+      timeout(10000),
       tap(msg => {
         if (msg.event === 'update' && msg.data) {
           this.updates$.next(msg.data);
