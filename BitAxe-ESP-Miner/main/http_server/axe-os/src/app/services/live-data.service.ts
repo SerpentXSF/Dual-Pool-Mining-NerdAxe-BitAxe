@@ -9,12 +9,17 @@ import { environment } from 'src/environments/environment';
 // Poll cadence and the freshness window that decides whether the socket is
 // actually feeding us.
 //
-// The worst case is a tick landing just inside the freshness window (so it
-// skips) followed by the next tick: the largest gap between payloads is
-// therefore VISIBLE_POLL_MS + DATA_FRESH_MS + one round-trip. These values keep
-// that at ~4.2s, comfortably under the 5000 ms staleness threshold that raises
-// "Unable to reach the device" (home.component.ts::checkStaleData), so no phase
-// alignment can flash the banner while HTTP is answering.
+// A tick landing just inside the freshness window skips, so the largest gap
+// between payloads is VISIBLE_POLL_MS + DATA_FRESH_MS + one round-trip, about
+// 4.2s while the device answers promptly. That sits under the 5000 ms staleness
+// threshold that raises "Unable to reach the device"
+// (home.component.ts::checkStaleData).
+//
+// Note this is no longer a hard bound. Since the poll uses exhaustMap, a tick
+// arriving while a request is still outstanding is dropped rather than
+// replacing it, so a round-trip of 2.5-5s pushes the gap to ~5s and the banner
+// can flicker. That is still strictly better than switchMap, which cancelled
+// and reissued forever and never completed a request at all in that state.
 //
 // DATA_FRESH_MS also has a floor: the firmware pushes a diff roughly every
 // 500 ms and at least once a second (uptimeSeconds always changes), so anything
@@ -63,7 +68,13 @@ export class LiveDataService {
           exhaustMap(() => {
             const dataIsFresh = Date.now() - this.lastDataTime < DATA_FRESH_MS;
             if (this.connectedSubject.value && state === 'visible' && dataIsFresh) return EMPTY;
-            return this.systemService.getInfo();
+            // Swallow the error HERE, inside the exhaustMap. getInfo() carries
+            // timeout(API_TIMEOUT), and an error reaching the outer catchError
+            // completes fallbackPolling$ for good: polling never resumes until
+            // the page is reloaded. Under switchMap the next tick unsubscribed
+            // the request before that timeout could ever fire, so this was
+            // unreachable; exhaustMap lets the request run its full 15s.
+            return this.systemService.getInfo().pipe(catchError(() => EMPTY));
           })
         );
       }),
